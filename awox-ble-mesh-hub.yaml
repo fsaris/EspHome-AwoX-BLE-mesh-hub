@@ -1,0 +1,39 @@
+esphome:
+  name: "awox-ble-mesh-hub"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+status_led:
+  pin: GPIO2
+
+# Enable logging
+logger:
+  #level: VERY_VERBOSE
+
+mqtt:
+  broker: !secret mqtt_host
+  username: !secret mqtt_user
+  password: !secret mqtt_password
+
+ota:
+  password: "988af1bdbc81aa0760c360430673b560"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+
+awox_mesh:
+  mesh_name: !secret mesh_name
+  mesh_password: !secret mesh_password
