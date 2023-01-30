@@ -26,9 +26,10 @@ wifi:
   password: !secret wifi_password
 
 external_components:
-  - source:
-      type: local
-      path: components
+  source: github://fsaris/EspHome-AwoX-BLE-mesh-hub
+  # - source:
+  #     type: local
+  #     path: components
 
 esp32_ble_tracker:
   scan_parameters:
