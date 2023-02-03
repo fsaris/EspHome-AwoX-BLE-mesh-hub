@@ -49,8 +49,20 @@ static std::string encrypt(std::string key, std::string data) {
 
 static std::string int_as_hex_string(unsigned char hex1, unsigned char hex2, unsigned char hex3) {
   char value[6];
-  sprintf(value, "%02x%02x%02x", hex1, hex2, hex3);
+  sprintf(value, "%02X%02X%02X", hex1, hex2, hex3);
   return std::string((char *) value, 6);
+}
+
+static std::string get_product_code(unsigned char part1, unsigned char part2) {
+  char value[4];
+  sprintf(value, "%02ld%02ld", part1 ^ 16, part2);
+  return std::string((char *) value, 4);
+}
+
+static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
+  char value[17];
+  sprintf(value, "A4:C1:%02X:%02X:%02X:%02X", part3, part4, part5, part6);
+  return std::string((char *) value, 17);
 }
 
 static int convert_value_to_available_range(int value, int min_from, int max_from, int min_to, int max_to) {
@@ -58,6 +70,14 @@ static int convert_value_to_available_range(int value, int min_from, int max_fro
   int new_value = std::min((int) round((normalized * (float) (max_to - min_to)) + min_to), max_to);
 
   return std::max(new_value, min_to);
+}
+
+void MeshDevice::on_shutdown() {
+  // todo assure this message is published
+  for (int i = 0; i < this->devices_.size(); i++) {
+    this->devices_[i]->online = false;
+    this->publish_availability(this->devices_[i], false);
+  }
 }
 
 void MeshDevice::loop() {
@@ -70,7 +90,7 @@ void MeshDevice::loop() {
     ESP_LOGD(TAG, "Send command %d, for dest: %d", item.command, item.dest);
     this->command_queue.pop_front();
     ESP_LOGD(TAG, "remove item from queue");
-    this->write_command(item.command, item.data, item.dest);
+    this->write_command(item.command, item.data, item.dest, true);
   }
 
   while (!this->delayed_availability_publish.empty()) {
@@ -91,8 +111,8 @@ void MeshDevice::loop() {
 
 bool MeshDevice::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                                      esp_ble_gattc_cb_param_t *param) {
-  ESP_LOGD(TAG, "[%d] [%s] gattc_event_handler: event=%d gattc_if=%d", this->connection_index_,
-           this->address_str_.c_str(), event, gattc_if);
+  ESP_LOGVV(TAG, "[%d] [%s] gattc_event_handler: event=%d gattc_if=%d", this->connection_index_,
+            this->address_str_.c_str(), event, gattc_if);
 
   if (!esp32_ble_client::BLEClientBase::gattc_event_handler(event, gattc_if, param))
     return false;
@@ -129,7 +149,7 @@ bool MeshDevice::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t g
       }
       std::string notification = std::string((char *) param->notify.value, param->notify.value_len);
       std::string packet = this->decrypt_packet(notification);
-      ESP_LOGD(TAG, "Notification received: %s", TextToBinaryString(packet).c_str());
+      ESP_LOGV(TAG, "Notification received: %s", TextToBinaryString(packet).c_str());
       this->handle_packet(packet);
       break;
     }
@@ -305,7 +325,7 @@ void MeshDevice::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "online status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02x%02x%02x ",
+             "c_b: %d, rgb: %02X%02X%02X ",
              mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
@@ -326,10 +346,28 @@ void MeshDevice::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02x%02x%02x ",
+             "c_b: %d, rgb: %02X%02X%02X ",
              mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
+
+  } else if (static_cast<unsigned char>(packet[7]) == 0xD8 && !packet[10]) {
+    mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
+
+    Device *device = this->get_device(mesh_id);
+    device->mac = get_device_mac(static_cast<unsigned char>(packet[16]), static_cast<unsigned char>(packet[15]),
+                                 static_cast<unsigned char>(packet[14]), static_cast<unsigned char>(packet[13]));
+    device->product_id =
+        get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
+
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %s mac: %s => %s", mesh_id, device->product_id.c_str(),
+             device->mac.c_str(), TextToBinaryString(packet).c_str());
+
+    this->send_discovery(device);
+    return;
+
   } else {
-    ESP_LOGW(TAG, "Unknown report: command %02x", static_cast<unsigned char>(packet[7]));
+    ESP_LOGW(TAG, "Unknown report, dev [%d]: command %02X => %s", mesh_id, static_cast<unsigned char>(packet[7]),
+             TextToBinaryString(packet).c_str());
+
     return;
   }
 
@@ -386,11 +424,11 @@ std::string MeshDevice::device_state_as_string(Device *device) {
 }
 
 std::string MeshDevice::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
-  return discovery_info.prefix + "/" + "light" + "/awox-" + std::to_string(device->mesh_id) + "/config";
+  return discovery_info.prefix + "/" + device->component + "/awox-" + str_sanitize(device->mac) + "/config";
 }
 
 std::string MeshDevice::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
-  return global_mqtt_client->get_topic_prefix() + "/" + "light" + "/" + std::to_string(device->mesh_id) + "/" + suffix;
+  return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(device->mesh_id) + "/" + suffix;
 }
 
 void MeshDevice::publish_availability(Device *device, bool delayed) {
@@ -427,18 +465,22 @@ void MeshDevice::publish_state(Device *device) {
     color["r"] = device->R;
     color["g"] = device->G;
     color["b"] = device->B;
-    // color["w"] = device->temperature;
   });
 }
 
 void MeshDevice::send_discovery(Device *device) {
+  if (device->mac == "") {
+    ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
+             std::to_string(device->mesh_id).c_str());
+    return;
+  }
   ESP_LOGD(TAG, "'%s': Sending discovery...", std::to_string(device->mesh_id).c_str());
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
 
   global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
       [this, device, discovery_info](JsonObject root) {
-        root[MQTT_NAME] = "AwoX mesh device " + std::to_string(device->mesh_id);
+        root[MQTT_NAME] = device->product_name;
         root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(device, "state");
         root[MQTT_COMMAND_TOPIC] = this->get_mqtt_topic_for_(device, "command");
 
@@ -451,7 +493,7 @@ void MeshDevice::send_discovery(Device *device) {
 
         root[MQTT_AVAILABILITY_MODE] = "all";
 
-        root[MQTT_UNIQUE_ID] = "awox-light-" + std::to_string(device->mesh_id);
+        root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->component;
 
         // light
         root["schema"] = "json";
@@ -459,6 +501,8 @@ void MeshDevice::send_discovery(Device *device) {
         root[MQTT_COLOR_MODE] = true;
         root["brightness"] = true;
         root["brightness_scale"] = 255;
+
+        root[MQTT_ICON] = device->icon;
 
         JsonArray color_modes = root.createNestedArray("supported_color_modes");
         color_modes.add("color_temp");
@@ -471,11 +515,15 @@ void MeshDevice::send_discovery(Device *device) {
         const std::string &node_name = App.get_name();
 
         JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-        device_info[MQTT_DEVICE_IDENTIFIERS] = "esp-awox-mesh-" + std::to_string(device->mesh_id);
-        device_info[MQTT_DEVICE_NAME] = node_name;
-        // device_info[MQTT_DEVICE_SW_VERSION] = "esphome v" ESPHOME_VERSION " " + App.get_compilation_time();
-        // device_info[MQTT_DEVICE_MODEL] = ESPHOME_BOARD;
-        device_info[MQTT_DEVICE_MANUFACTURER] = "Eglo";
+
+        JsonArray identifiers = device_info.createNestedArray(MQTT_DEVICE_IDENTIFIERS);
+        identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
+        identifiers.add(device->mac);
+
+        device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
+        device_info[MQTT_DEVICE_MODEL] = device->product_name;
+        device_info[MQTT_DEVICE_MANUFACTURER] = device->manufacturer;
+        device_info["via_device"] = node_name;
       },
       0, discovery_info.retain);
 
@@ -605,7 +653,7 @@ void MeshDevice::queue_command(int command, const std::string &data, int dest) {
 }
 
 bool MeshDevice::write_command(int command, const std::string &data, int dest, bool withResponse) {
-  ESP_LOGI(TAG, "[%d] [%s] write_command packet %02x => %s", this->get_conn_id(), this->address_str_.c_str(), command,
+  ESP_LOGI(TAG, "[%d] [%s] write_command packet %02X => %s", this->get_conn_id(), this->address_str_.c_str(), command,
            TextToBinaryString(data).c_str());
   std::string packet = this->build_packet(dest, command, data);
   // todo: withResponse
@@ -622,12 +670,10 @@ void MeshDevice::request_status() {
 }
 
 Device *MeshDevice::get_device(int mesh_id) {
-  // ESP_LOGI(TAG, "get device %d", mesh_id);
+  ESP_LOGVV(TAG, "get device %d", mesh_id);
 
-  auto found = std::find_if(this->devices_.begin(), this->devices_.end(), [mesh_id](const Device *_f) {
-    // ESP_LOGI(TAG, "match? %d == %d", _f->mesh_id, mesh_id);
-    return _f->mesh_id == mesh_id;
-  });
+  auto found = std::find_if(this->devices_.begin(), this->devices_.end(),
+                            [mesh_id](const Device *_f) { return _f->mesh_id == mesh_id; });
 
   if (found != devices_.end()) {
     Device *ptr = devices_.at(found - devices_.begin());
@@ -641,7 +687,8 @@ Device *MeshDevice::get_device(int mesh_id) {
 
   ESP_LOGI(TAG, "Added mesh_id: %d, Number of found mesh devices = %d", device->mesh_id, this->devices_.size());
 
-  this->send_discovery(device);
+  this->request_device_info(device->mesh_id);
+  // this->request_device_version(device->mesh_id);
 
   return device;
 }
@@ -665,8 +712,19 @@ bool MeshDevice::set_white_brightness(int dest, int brightness) {
   this->queue_command(C_WHITE_BRIGHTNESS, {static_cast<char>(brightness)}, dest);
   return true;
 }
+
 bool MeshDevice::set_white_temperature(int dest, int temp) {
   this->queue_command(C_WHITE_TEMPERATURE, {static_cast<char>(temp)}, dest);
+  return true;
+}
+
+bool MeshDevice::request_device_info(int dest) {
+  this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x00}, dest);
+  return true;
+}
+
+bool MeshDevice::request_device_version(int dest) {
+  this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x02}, dest);
   return true;
 }
 

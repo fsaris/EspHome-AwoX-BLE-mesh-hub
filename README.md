@@ -1,7 +1,7 @@
 # ESPHome component: AwoX BLE mesh (mqtt) hub
 
 >
-> WIP: currently only support RGBW lights
+> WIP: currently only support for RGBW lights
 >
 
 A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.

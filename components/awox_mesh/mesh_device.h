@@ -33,6 +33,10 @@ static std::string uuid_pair_char = "00010203-0405-0607-0809-0a0b0c0d1914";
 #define C_COLOR_BRIGHTNESS 0xf2
 #define C_WHITE_BRIGHTNESS 0xf1
 #define C_WHITE_TEMPERATURE 0xf0
+#define COMMAND_ADDRESS 0xE0
+#define COMMAND_ADDRESS_REPORT 0xE1
+#define COMMAND_DEVICE_INFO_QUERY 0xEA
+#define COMMAND_DEVICE_INFO_REPORT 0xEB
 
 static std::string TextToBinaryString(std::string words) {
   std::string binaryString = "";
@@ -47,6 +51,14 @@ struct Device {
   bool send_discovery = false;
   uint32_t last_online = 0;
   bool online;
+
+  std::string mac = "";
+  std::string product_id;
+  std::string component = "light";
+
+  std::string product_name = "Spot 120";
+  std::string manufacturer = "Eglo";
+  std::string icon = "mdi:wall-sconce-flat";
 
   bool state = false;
   bool color_mode = false;
@@ -187,6 +199,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   void loop() override;
 
+  void on_shutdown() override;
+
   bool gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                            esp_ble_gattc_cb_param_t *param) override;
 
@@ -226,6 +240,10 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
   bool set_white_brightness(int dest, int brightness);
 
   bool set_white_temperature(int dest, int temp);
+
+  bool request_device_info(int dest);
+
+  bool request_device_version(int dest);
 };
 
 }  // namespace awox_mesh
