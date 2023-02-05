@@ -462,28 +462,32 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
 
   ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
 
-  global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), device->online ? "online" : "offline");
+  global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), device->online ? "online" : "offline",
+                              0, true);
 }
 
 void MeshDevice::publish_state(Device *device) {
-  global_mqtt_client->publish_json(this->get_mqtt_topic_for_(device, "state"), [this, device](JsonObject root) {
-    root["state"] = device->state ? "ON" : "OFF";
+  global_mqtt_client->publish_json(
+      this->get_mqtt_topic_for_(device, "state"),
+      [this, device](JsonObject root) {
+        root["state"] = device->state ? "ON" : "OFF";
 
-    root["color_mode"] = "color_temp";
+        root["color_mode"] = "color_temp";
 
-    root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
+        root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
 
-    if (device->color_mode) {
-      root["color_mode"] = "rgb";
-      root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
-    } else {
-      root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
-    }
-    JsonObject color = root.createNestedObject("color");
-    color["r"] = device->R;
-    color["g"] = device->G;
-    color["b"] = device->B;
-  });
+        if (device->color_mode) {
+          root["color_mode"] = "rgb";
+          root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
+        } else {
+          root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
+        }
+        JsonObject color = root.createNestedObject("color");
+        color["r"] = device->R;
+        color["g"] = device->G;
+        color["b"] = device->B;
+      },
+      0, true);
 }
 
 void MeshDevice::send_discovery(Device *device) {
