@@ -460,10 +460,9 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
     return;
   }
 
-  ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
-
-  global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), device->online ? "online" : "offline",
-                              0, true);
+  std::string message = device->online ? "online" : "offline";
+  ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, message);
+  global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
 void MeshDevice::publish_state(Device *device) {
