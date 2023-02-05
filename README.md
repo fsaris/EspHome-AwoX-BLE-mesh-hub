@@ -1,7 +1,9 @@
 # ESPHome component: AwoX BLE mesh (mqtt) hub
 
 >
-> WIP: currently only support for RGBW lights
+> WIP: currently somd 3 RGBW spot lights and power plugs are correctly regocnized. Others will be added https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/blob/main/components/awox_mesh/device_info.h#L90
+>
+> Non recognized devices will show up as dimmable lights. Create an issue with the `product id` shown in the device model (mqtt discovery message/HomeAssistant device info) and the features of the device to get it added.
 >
 
 A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
