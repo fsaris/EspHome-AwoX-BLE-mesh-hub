@@ -63,7 +63,7 @@ static unsigned char turn_off_bit(unsigned char value, int bit) {
 
 static std::string get_product_code(unsigned char part1, unsigned char part2) {
   char value[4];
-  sprintf(value, "%02ld%02ld", turn_off_bit(part1, 16), part2);
+  sprintf(value, "%02X%02X", turn_off_bit(part1, 16), part2);
   return std::string((char *) value, 4);
 }
 
@@ -92,12 +92,12 @@ void MeshDevice::loop() {
   esp32_ble_client::BLEClientBase::loop();
 
   if (this->connected() && !this->command_queue.empty() && this->last_send_command < esphome::millis() - 120) {
-    ESP_LOGD(TAG, "Send command, time since last command: %d", esphome::millis() - this->last_send_command);
+    ESP_LOGV(TAG, "Send command, time since last command: %d", esphome::millis() - this->last_send_command);
     this->last_send_command = esphome::millis();
     QueuedCommand item = this->command_queue.front();
-    ESP_LOGD(TAG, "Send command %d, for dest: %d", item.command, item.dest);
+    ESP_LOGV(TAG, "Send command %d, for dest: %d", item.command, item.dest);
     this->command_queue.pop_front();
-    ESP_LOGD(TAG, "remove item from queue");
+    ESP_LOGV(TAG, "remove item from queue");
     this->write_command(item.command, item.data, item.dest, true);
   }
 
@@ -435,7 +435,7 @@ std::string MeshDevice::device_state_as_string(Device *device) {
     output += std::to_string(device->white_brightness);
     output += " %%)";
   }
-  output += device->online ? " ONLINE" : "OFFLINE!!";
+  output += device->online ? " ONLINE" : " OFFLINE!!";
 
   return output;
 }
@@ -566,7 +566,7 @@ void MeshDevice::send_discovery(Device *device) {
 }
 
 void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
-  ESP_LOGD(TAG, "Process command");
+  ESP_LOGV(TAG, "Process command");
   bool state_set = false;
   if (root.containsKey("color")) {
     JsonObject color = root["color"];
@@ -686,7 +686,7 @@ void MeshDevice::queue_command(int command, const std::string &data, int dest) {
 }
 
 bool MeshDevice::write_command(int command, const std::string &data, int dest, bool withResponse) {
-  ESP_LOGI(TAG, "[%d] [%s] write_command packet %02X => %s", this->get_conn_id(), this->address_str_.c_str(), command,
+  ESP_LOGV(TAG, "[%d] [%s] write_command packet %02X => %s", this->get_conn_id(), this->address_str_.c_str(), command,
            TextToBinaryString(data).c_str());
   std::string packet = this->build_packet(dest, command, data);
   // todo: withResponse
