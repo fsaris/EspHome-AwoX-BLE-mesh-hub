@@ -12,6 +12,16 @@ You will need your mesh credentials, easiest way to find them when comming from 
 
 When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
 
+# Requirements
+- ESP32 module
+- ESPHome 2022.12.0 or newer
+- MQTT broker
+
+# Recomendations
+- HomeAssistant 2022.12.0 or newer
+- ESPHome add-on for HomeAssistant
+
+
 ### References
 - https://github.com/fsaris/home-assistant-awox
 - https://github.com/Leiaz/python-awox-mesh-light

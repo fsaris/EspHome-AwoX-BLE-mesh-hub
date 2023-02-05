@@ -56,7 +56,7 @@ void AwoxMesh::loop() {
   if (esphome::millis() - this->start > 20000 && this->devices_.size() > 0 && this->connection->address_str() == "") {
     ESP_LOGD(TAG, "Total devices: %d", this->devices_.size());
     for (int i = 0; i < this->devices_.size(); i++) {
-      ESP_LOGD(TAG, "AVailable device %s => rssi: %d", this->devices_[i].address_str.c_str(), this->devices_[i].rssi);
+      ESP_LOGD(TAG, "Available device %s => rssi: %d", this->devices_[i].address_str.c_str(), this->devices_[i].rssi);
     }
     auto device = this->devices_.front();
 

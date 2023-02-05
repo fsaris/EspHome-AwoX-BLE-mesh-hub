@@ -4,6 +4,7 @@
 
 #include <math.h>
 #include "mesh_device.h"
+#include "device_info.h"
 #include <AES.h>
 #include <Crypto.h>
 #include <GCM.h>
@@ -53,9 +54,16 @@ static std::string int_as_hex_string(unsigned char hex1, unsigned char hex2, uns
   return std::string((char *) value, 6);
 }
 
+static unsigned char turn_off_bit(unsigned char value, int bit) {
+  if (value & bit) {
+    value = value ^ bit;
+  }
+  return value;
+}
+
 static std::string get_product_code(unsigned char part1, unsigned char part2) {
   char value[4];
-  sprintf(value, "%02ld%02ld", part1 ^ 16, part2);
+  sprintf(value, "%02ld%02ld", turn_off_bit(part1, 16), part2);
   return std::string((char *) value, 4);
 }
 
@@ -105,6 +113,14 @@ void MeshDevice::loop() {
     } else {
       ESP_LOGD(TAG, "Skipped publishing availability for %d - %s (is currently %s)", publish.device->mesh_id,
                publish.online ? "Online" : "Offline", publish.device->online ? "Online" : "Offline");
+    }
+  }
+
+  for (auto *device : this->devices_) {
+    if (!device->send_discovery && device->device_info_requested > 0 &&
+        device->device_info_requested < esphome::millis() - 5000) {
+      ESP_LOGD(TAG, "Request info again for %d", device->mesh_id);
+      this->request_device_info(device);
     }
   }
 }
@@ -355,11 +371,11 @@ void MeshDevice::handle_packet(std::string &packet) {
     Device *device = this->get_device(mesh_id);
     device->mac = get_device_mac(static_cast<unsigned char>(packet[16]), static_cast<unsigned char>(packet[15]),
                                  static_cast<unsigned char>(packet[14]), static_cast<unsigned char>(packet[13]));
-    device->product_id =
-        get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
+    device->device_info = this->device_info_resolver->get_by_product_id(
+        get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12])));
 
-    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %s mac: %s => %s", mesh_id, device->product_id.c_str(),
-             device->mac.c_str(), TextToBinaryString(packet).c_str());
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %s mac: %s => %s", mesh_id,
+             device->device_info->get_product_id().c_str(), device->mac.c_str(), TextToBinaryString(packet).c_str());
 
     this->send_discovery(device);
     return;
@@ -373,6 +389,7 @@ void MeshDevice::handle_packet(std::string &packet) {
 
   Device *device = this->get_device(mesh_id);
   bool online_changed = false;
+
   if (device->online != online) {
     online_changed = true;
   }
@@ -424,7 +441,8 @@ std::string MeshDevice::device_state_as_string(Device *device) {
 }
 
 std::string MeshDevice::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
-  return discovery_info.prefix + "/" + device->component + "/awox-" + str_sanitize(device->mac) + "/config";
+  return discovery_info.prefix + "/" + device->device_info->get_component_type() + "/awox-" +
+         str_sanitize(device->mac) + "/config";
 }
 
 std::string MeshDevice::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
@@ -438,7 +456,7 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
     publish.online = device->online;
     publish.time = esphome::millis();
     this->delayed_availability_publish.push_back(publish);
-    ESP_LOGI(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
+    ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
     return;
   }
 
@@ -476,42 +494,57 @@ void MeshDevice::send_discovery(Device *device) {
   }
   ESP_LOGD(TAG, "'%s': Sending discovery...", std::to_string(device->mesh_id).c_str());
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
+  device->send_discovery = true;
 
   global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
       [this, device, discovery_info](JsonObject root) {
-        root[MQTT_NAME] = device->product_name;
+        root["schema"] = "json";
+
+        // Entity
+        root[MQTT_NAME] = device->device_info->get_name();
+        root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->device_info->get_component_type();
+
+        if (device->device_info->get_icon() != "") {
+          root[MQTT_ICON] = device->device_info->get_icon();
+        }
+
+        // State and command topic
         root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(device, "state");
         root[MQTT_COMMAND_TOPIC] = this->get_mqtt_topic_for_(device, "command");
 
+        // Availavility topics
         JsonArray availability = root.createNestedArray(MQTT_AVAILABILITY);
-
         auto availability_topic_1 = availability.createNestedObject();
         availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
         auto availability_topic_2 = availability.createNestedObject();
         availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-
         root[MQTT_AVAILABILITY_MODE] = "all";
 
-        root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->component;
-
-        // light
-        root["schema"] = "json";
-
+        // Features
         root[MQTT_COLOR_MODE] = true;
-        root["brightness"] = true;
-        root["brightness_scale"] = 255;
 
-        root[MQTT_ICON] = device->icon;
+        if (device->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS) ||
+            device->device_info->has_feature(FEATURE_COLOR_BRIGHTNESS)) {
+          root["brightness"] = true;
+          root["brightness_scale"] = 255;
+        }
 
         JsonArray color_modes = root.createNestedArray("supported_color_modes");
-        color_modes.add("color_temp");
-        // color_modes.add("brightness");
-        color_modes.add("rgb");
+        if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+          color_modes.add("color_temp");
 
-        root[MQTT_MIN_MIREDS] = 153;
-        root[MQTT_MAX_MIREDS] = 370;
+          root[MQTT_MIN_MIREDS] = 153;
+          root[MQTT_MAX_MIREDS] = 370;
 
+          if (device->device_info->has_feature(FEATURE_COLOR)) {
+            color_modes.add("rgb");
+          }
+        } else {
+          color_modes.add("onoff");
+        }
+
+        // Device
         const std::string &node_name = App.get_name();
 
         JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
@@ -521,8 +554,8 @@ void MeshDevice::send_discovery(Device *device) {
         identifiers.add(device->mac);
 
         device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
-        device_info[MQTT_DEVICE_MODEL] = device->product_name;
-        device_info[MQTT_DEVICE_MANUFACTURER] = device->manufacturer;
+        device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
+        device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = node_name;
       },
       0, discovery_info.retain);
@@ -677,7 +710,7 @@ Device *MeshDevice::get_device(int mesh_id) {
 
   if (found != devices_.end()) {
     Device *ptr = devices_.at(found - devices_.begin());
-    ESP_LOGD(TAG, "Found existing mesh_id: %d, Number of found mesh devices = %d", ptr->mesh_id, this->devices_.size());
+    ESP_LOGV(TAG, "Found existing mesh_id: %d, Number of found mesh devices = %d", ptr->mesh_id, this->devices_.size());
     return ptr;
   }
 
@@ -687,7 +720,7 @@ Device *MeshDevice::get_device(int mesh_id) {
 
   ESP_LOGI(TAG, "Added mesh_id: %d, Number of found mesh devices = %d", device->mesh_id, this->devices_.size());
 
-  this->request_device_info(device->mesh_id);
+  this->request_device_info(device);
   // this->request_device_version(device->mesh_id);
 
   return device;
@@ -718,8 +751,9 @@ bool MeshDevice::set_white_temperature(int dest, int temp) {
   return true;
 }
 
-bool MeshDevice::request_device_info(int dest) {
-  this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x00}, dest);
+bool MeshDevice::request_device_info(Device *device) {
+  device->device_info_requested = esphome::millis();
+  this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x00}, device->mesh_id);
   return true;
 }
 

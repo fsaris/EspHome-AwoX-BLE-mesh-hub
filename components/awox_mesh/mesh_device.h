@@ -9,6 +9,7 @@
 #include "esphome/components/esp32_ble_client/ble_client_base.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #include "esphome/components/mqtt/mqtt_client.h"
+#include "device_info.h"
 
 namespace esphome {
 namespace awox_mesh {
@@ -50,15 +51,12 @@ struct Device {
   int mesh_id;
   bool send_discovery = false;
   uint32_t last_online = 0;
+  uint32_t device_info_requested = 0;
   bool online;
 
   std::string mac = "";
-  std::string product_id;
-  std::string component = "light";
 
-  std::string product_name = "Spot 120";
-  std::string manufacturer = "Eglo";
-  std::string icon = "mdi:wall-sconce-flat";
+  DeviceInfo *device_info;
 
   bool state = false;
   bool color_mode = false;
@@ -89,6 +87,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
    */
   int packet_count = 1;
   uint32_t last_send_command = 0;
+
+  DeviceInfoResolver *device_info_resolver = new DeviceInfoResolver();
 
   std::vector<Device *> devices_{};
   std::deque<PublishOnlineStatus> delayed_availability_publish{};
@@ -220,9 +220,6 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
       this->reverse_address = std::string((char *) buf, 6);
     }
-
-    ESP_LOGI("MeshDevice", "[%d] [%s] reverse address: %s", this->get_conn_id(), this->address_str_.c_str(),
-             TextToBinaryString(this->reverse_address).c_str());
   };
 
   void set_disconnect_callback(std::function<void()> &&f);
@@ -241,7 +238,7 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   bool set_white_temperature(int dest, int temp);
 
-  bool request_device_info(int dest);
+  bool request_device_info(Device *device);
 
   bool request_device_version(int dest);
 };
