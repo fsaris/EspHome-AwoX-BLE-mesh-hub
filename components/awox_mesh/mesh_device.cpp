@@ -91,14 +91,14 @@ void MeshDevice::on_shutdown() {
 void MeshDevice::loop() {
   esp32_ble_client::BLEClientBase::loop();
 
-  if (this->connected() && !this->command_queue.empty() && this->last_send_command < esphome::millis() - 120) {
+  if (this->connected() && !this->command_queue.empty() && this->last_send_command < esphome::millis() - 180) {
     ESP_LOGV(TAG, "Send command, time since last command: %d", esphome::millis() - this->last_send_command);
     this->last_send_command = esphome::millis();
     QueuedCommand item = this->command_queue.front();
     ESP_LOGV(TAG, "Send command %d, for dest: %d", item.command, item.dest);
     this->command_queue.pop_front();
     ESP_LOGV(TAG, "remove item from queue");
-    this->write_command(item.command, item.data, item.dest, true);
+    this->write_command(item.command, item.data, item.dest, false);
   }
 
   while (!this->delayed_availability_publish.empty()) {
