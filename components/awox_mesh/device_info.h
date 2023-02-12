@@ -23,27 +23,27 @@ namespace awox_mesh {
 
 struct DeviceStruct {
   int device_type;
-  std::string name;
-  std::string model;
+  const char *name;
+  const char *model;
   int manufacturer;
-  std::string icon;
+  const char *icon;
 };
 
 class DeviceInfo {
  protected:
-  std::string component_type;
+  const char *component_type;
   int product_id;
-  std::string name;
-  std::string model;
-  std::string manufacturer;
-  std::string icon;
+  const char *name;
+  const char *model;
+  const char *manufacturer;
+  const char *icon;
   std::map<int, bool> features;
 
   void add_feature(int feature) { features[feature] = true; }
 
  public:
-  DeviceInfo(int product_id = 0, std::string name = "", std::string model = "", std::string manufacturer = "",
-             std::string icon = "") {
+  DeviceInfo(int product_id = 0, const char *name = "", const char *model = "", const char *manufacturer = "",
+             const char *icon = "") {
     this->product_id = product_id;
     this->name = name;
     this->model = model;
@@ -51,19 +51,19 @@ class DeviceInfo {
     this->icon = icon;
   }
 
-  std::string get_component_type() const { return this->component_type; }
+  const char *get_component_type() const { return this->component_type; }
   int get_product_id() const { return this->product_id; }
-  std::string get_name() const { return this->name; }
-  std::string get_model() const { return this->model; }
-  std::string get_manufacturer() const { return this->manufacturer; }
-  std::string get_icon() const { return this->icon; }
+  const char *get_name() const { return this->name; }
+  const char *get_model() const { return this->model; }
+  const char *get_manufacturer() const { return this->manufacturer; }
+  const char *get_icon() const { return this->icon; }
 
   bool has_feature(int feature) { return features.count(feature) > 0; }
 };
 
 class MeshLightColor : public DeviceInfo {
  public:
-  MeshLightColor(int product_id, std::string name, std::string model, std::string manufacturer, std::string icon = "")
+  MeshLightColor(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     component_type = "light";
 
@@ -77,8 +77,8 @@ class MeshLightColor : public DeviceInfo {
 
 class MeshLightWhiteTemperature : public DeviceInfo {
  public:
-  MeshLightWhiteTemperature(int product_id, std::string name, std::string model, std::string manufacturer,
-                            std::string icon = "")
+  MeshLightWhiteTemperature(int product_id, const char *name, const char *model, const char *manufacturer,
+                            const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "light";
 
@@ -90,7 +90,7 @@ class MeshLightWhiteTemperature : public DeviceInfo {
 
 class MeshLightWhite : public DeviceInfo {
  public:
-  MeshLightWhite(int product_id, std::string name, std::string model, std::string manufacturer, std::string icon = "")
+  MeshLightWhite(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "light";
 
@@ -101,7 +101,7 @@ class MeshLightWhite : public DeviceInfo {
 
 class MeshPlug : public DeviceInfo {
  public:
-  MeshPlug(int product_id, std::string name, std::string model, std::string manufacturer, std::string icon = "")
+  MeshPlug(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "switch";
   }
@@ -117,9 +117,9 @@ class DeviceInfoResolver {
                                     device.icon);
   }
 
-  DeviceInfo *create_device_info(int device_type, int product_id, std::string name, std::string model, int manufacturer,
-                                 std::string icon = "") {
-    std::string manufacturer_ = "AwoX";
+  DeviceInfo *create_device_info(int device_type, int product_id, const char *name, const char *model, int manufacturer,
+                                 const char *icon = "") {
+    const char *manufacturer_ = "AwoX";
     switch (manufacturer) {
       case MANUFACTURER_EGLO:
         manufacturer_ = "EGLO";
@@ -147,8 +147,8 @@ class DeviceInfoResolver {
     return this->device_info[product_id];
   }
 
-  void add_device(int device_type, int product_id, std::string name, std::string model, int manufacturer,
-                  std::string icon = "") {
+  void add_device(int device_type, int product_id, const char *name, const char *model, int manufacturer,
+                  const char *icon = "") {
     DeviceStruct device = {};
     device.device_type = device_type;
     device.name = name;
@@ -158,32 +158,31 @@ class DeviceInfoResolver {
     this->devices[product_id] = device;
   }
 
-  static std::string get_product_code_as_hex_string(int product_id) {
-    char value[4];
-    sprintf(value, "%04X", product_id);
-    return std::string((char *) value, 4);
+  static const char *get_product_code_as_hex_string(int product_id) {
+    char value[13];
+    sprintf(value, "Product: %04X", product_id);
+    return std::string((char *) value, 13).c_str();
   }
 
  public:
   DeviceInfoResolver() {
-    // this->add_device(DEVICE_TYPE_RGB, 0x13, "SmartLIGHT Color Mesh 9", "SMLm_C9", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x14, "SmartLIGHT White Mesh 13W", "SMLm_W13", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x15, "SmartLIGHT Color Mesh 13W", "SMLm_C13", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x16, "SmartLIGHT White Mesh 15W", "SMLm_W15", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x17, "SmartLIGHT Color Mesh 15W", "SMLm_C15", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x21, "SmartLIGHT White Mesh 9W", "SSMLm_w9", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x22, "SmartLIGHT Color Mesh 9W", "SSMLm_c9", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x23, "EGLOBulb A60 9W", "ESMLm_c9", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x24, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9", MANUFACTURER_KERIA);
-    // this->add_device(DEVICE_TYPE_RGB, 0x25, "EGLOPanel 30X30", "EPanel_300", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x26, "EGLOPanel 60X60", "EPanel_600", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x27, "EGLO Ceiling DOWNLIGHT", "EMod_Ceil", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x29, "EGLOBulb G95 13W", "ESMLm_c13g", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x2A, "Keria SmartLIGHT Color Mesh 13W Globe", "KSMLm_c13g",
-    // MANUFACTURER_KERIA);
-    // this->add_device(DEVICE_TYPE_RGB, 0x2B, "SmartLIGHT Color Mesh 13W Globe", "SMLm_c13g", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x30, "EGLOPanel 30X120", "EPanel_120", MANUFACTURER_EGLO);
-    this->add_device(DEVICE_TYPE_RGB, 0x32, "Spot 120", "EGLOSpot 120/w", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
+    this->add_device(DEVICE_TYPE_RGB, 0x13, "SmartLIGHT Color Mesh 9", "SMLm_C9", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x14, "SmartLIGHT White Mesh 13W", "SMLm_W13", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x15, "SmartLIGHT Color Mesh 13W", "SMLm_C13", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x16, "SmartLIGHT White Mesh 15W", "SMLm_W15", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x17, "SmartLIGHT Color Mesh 15W", "SMLm_C15", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x21, "SmartLIGHT White Mesh 9W", "SSMLm_w9", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x22, "SmartLIGHT Color Mesh 9W", "SSMLm_c9", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x23, "EGLOBulb A60 9W", "ESMLm_c9", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x24, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x25, "EGLOPanel 30X30", "EPanel_300", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x26, "EGLOPanel 60X60", "EPanel_600", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x27, "EGLO Ceiling DOWNLIGHT", "EMod_Ceil", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x29, "EGLOBulb G95 13W", "ESMLm_c13g", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x2A, "Keria SmartLIGHT Color Mesh 13W Globe", "KSMLm_c13g", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x2B, "SmartLIGHT Color Mesh 13W Globe", "SMLm_c13g", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x30, "EGLOPanel 30X120", "EPanel_120", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x32, "Spot 120", "EGLOSpot 120/w", MANUFACTURER_EGLO, "mdis:wall-sconce-flat");
     this->add_device(DEVICE_TYPE_RGB, 0x33, "Spot 170", "EGLOSpot 170/w", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
     this->add_device(DEVICE_TYPE_RGB, 0x34, "Spot 225", "EGLOSpot 225/w", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
     this->add_device(DEVICE_TYPE_RGB, 0x35, "Giron-C 17W", "EGLO 32589", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
@@ -321,8 +320,8 @@ class DeviceInfoResolver {
     }
 
     return this->create_device_info(DEVICE_TYPE_DIM, product_id, "Unknown device type",
-                                    "Unknown device, product id: " + this->get_product_code_as_hex_string(product_id),
-                                    MANUFACTURER_AWOX, "mdi:lightbulb-help-outline");
+                                    this->get_product_code_as_hex_string(product_id), MANUFACTURER_AWOX,
+                                    "mdi:lightbulb-help-outline");
   }
 };
 
