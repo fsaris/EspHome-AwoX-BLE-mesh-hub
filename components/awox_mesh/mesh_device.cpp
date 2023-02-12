@@ -534,16 +534,25 @@ void MeshDevice::send_discovery(Device *device) {
         }
 
         JsonArray color_modes = root.createNestedArray("supported_color_modes");
-        if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+
+        if (device->device_info->has_feature(FEATURE_COLOR)) {
+          color_modes.add("rgb");
+        }
+
+        if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
           color_modes.add("color_temp");
 
           root[MQTT_MIN_MIREDS] = 153;
           root[MQTT_MAX_MIREDS] = 370;
+        }
 
-          if (device->device_info->has_feature(FEATURE_COLOR)) {
-            color_modes.add("rgb");
-          }
-        } else {
+        // brightness should always be used alone
+        // https://developers.home-assistant.io/docs/core/entity/light/#color-modes
+        if (color_modes.size() == 0 && device->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS)) {
+          color_modes.add("brightness");
+        }
+
+        if (color_modes.size() == 0) {
           color_modes.add("onoff");
         }
 
@@ -569,7 +578,7 @@ void MeshDevice::send_discovery(Device *device) {
 }
 
 void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
-  ESP_LOGV(TAG, "Process command");
+  ESP_LOGV(TAG, "[%d] Process command", device->mesh_id);
   bool state_set = false;
   if (root.containsKey("color")) {
     JsonObject color = root["color"];
@@ -580,7 +589,8 @@ void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
     device->G = (int) color["g"];
     device->B = (int) color["b"];
 
-    ESP_LOGD(TAG, "Process command color %d %d %d", (int) color["r"], (int) color["g"], (int) color["b"]);
+    ESP_LOGD(TAG, "[%d] Process command color %d %d %d", device->mesh_id, (int) color["r"], (int) color["g"],
+             (int) color["b"]);
 
     this->set_color(device->mesh_id, (int) color["r"], (int) color["g"], (int) color["b"]);
   }
@@ -593,7 +603,7 @@ void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
     device->state = true;
     device->color_brightness = brightness;
 
-    ESP_LOGD(TAG, "Process command color_brightness %d", (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%d] Process command color_brightness %d", device->mesh_id, (int) root["brightness"]);
     this->set_color_brightness(device->mesh_id, brightness);
 
   } else if (root.containsKey("brightness")) {
@@ -603,7 +613,7 @@ void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
     device->state = true;
     device->white_brightness = brightness;
 
-    ESP_LOGD(TAG, "Process command white_brightness %d", (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%d] Process command white_brightness %d", device->mesh_id, (int) root["brightness"]);
     this->set_white_brightness(device->mesh_id, brightness);
   }
 
@@ -614,12 +624,12 @@ void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
     device->state = true;
     device->temperature = temperature;
 
-    ESP_LOGD(TAG, "Process command color_temp %d", (int) root["color_temp"]);
+    ESP_LOGD(TAG, "[%d] Process command color_temp %d", device->mesh_id, (int) root["color_temp"]);
     this->set_white_temperature(device->mesh_id, temperature);
   }
 
   if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "Process command state");
+    ESP_LOGD(TAG, "[%d] Process command state", device->mesh_id);
     auto val = parse_on_off(root["state"]);
     switch (val) {
       case PARSE_ON:
