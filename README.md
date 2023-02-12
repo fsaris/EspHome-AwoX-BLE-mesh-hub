@@ -1,7 +1,10 @@
 # ESPHome component: AwoX BLE mesh (mqtt) hub
 
-
-> Devices not yet defined will show up as dimmable lights. Create an issue with the `product id` shown in the device model (mqtt discovery message/HomeAssistant device info) and the features of the device to get it added.
+>
+> **Supported devices/lights:**
+> A list of supported devices can be found here => https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/blob/main/components/awox_mesh/device_info.h#L90
+>
+> Devices not yet in this list will be recognized as a dimmable light. Create an issue with the `product id` (shown in model string of the mqtt discovery message/HomeAssistant device info) and the features of the device to get it added.
 >
 
 A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
