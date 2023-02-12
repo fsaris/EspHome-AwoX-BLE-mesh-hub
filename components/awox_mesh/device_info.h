@@ -187,107 +187,83 @@ class DeviceInfoResolver {
     this->add_device(DEVICE_TYPE_RGB, 0x34, "Spot 225", "EGLOSpot 225/w", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
     this->add_device(DEVICE_TYPE_RGB, 0x35, "Giron-C 17W", "EGLO 32589", MANUFACTURER_EGLO, "mdi:wall-sconce-flat");
     this->add_device(DEVICE_TYPE_RGB, 0x36, "EGLO Ceiling GIRON 30", "ECeil_g38", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x37, "SmartLIGHT Color Mesh 5W GU10", "SMLm_c5_GU10", MANUFACTURER_AWOX);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x38, "SmartLIGHT Color Mesh 5W E14", "SMLm_c5_E14", MANUFACTURER_AWOX);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x3A, "Keria SmartLIGHT Color Mesh 5W GU10", "KSMLm_c5_GU10",
-    // MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x3B, "Keria SmartLIGHT Color Mesh 5W E14", "KSMLm_c5_E14",
-    // MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x3C, "SmartLIGHT Color Mesh 5W GU10", "ESMLm_c5_GU10", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x3D, "SmartLIGHT Color Mesh 5W E14", "ESMLm_c5_E14", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x3F, "EGLO Surface round", "EFueva_225r", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x40, "EGLO Surface square", "EFueva_225s", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x41, "EGLO Surface round", "EFueva_300r", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x42, "EGLO Surface square", "EFueva_300s", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x43, "SmartLIGHT Color Mesh 9W", "SMLm_c9s", MANUFACTURER_AWOX);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x44, "SmartLIGHT Color Mesh 13W", "SMLm_c13gs", MANUFACTURER_AWOX);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x45, "EGLOBulb A60 9W", "ESMLm_c9s", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x46, "EGLOBulb G95 13W", "ESMLm_c13gs", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x47, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9s", MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x48, "Keria SmartLIGHT Color Mesh 13W Glob", "KSMLm_c13gs",
-    // MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_DIM, 0x49, "EGLOBulb A60 Warm", "ESMLm_w9w", MANUFACTURER_EGLO);
-
-    // this->add_device(DEVICE_TYPE_DIM, 0x4A, "EGLOBulb A60 Neutral", "ESMLm_w9n", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x4B, "EGLO Ceiling", "ECeiling_30", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x4C, "EGLO Pendant", "EPendant_30", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x4D, "EGLO Pendant", "EPendant_20", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x4E, "EGLO Stripled 3m", "EStrip_3m", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x4F, "EGLO Stripled 5m", "EStrip_5m", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0x50, "Outdoor", "EOutdoor_w14w", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x51, "EGLOSpot", "ETriSpot_85", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x53, "SmartLIGHT Color Mesh 9W", "SMLm_c9i", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_RGB, 0x54, "EGLOBulb A60 9W", "ESMLm_c9i", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x55, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9i", MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x56, "EGLOPanel 62X62", "EPanel_620", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x57, "EGLOPanel 45X45", "EPanel_450", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x59, "SmartLIGHT Color Mesh 13W Globe", "SMLm_c13gi", MANUFACTURER_AWOX);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x5A, "EGLOBulb G95 13W", "ESMLm_c13gi", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x5B, "Keria SmartLIGHT Color Mesh 13W Globe", "KSMLm_c13gi",
-    // MANUFACTURER_KERIA);
-
-    // this->add_device(DEVICE_TYPE_RGB, 0x5C, "SmartLIGHT Color Mesh 9W", "SSMLm_c9i", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x64, "SmartLIGHT White Mesh 9W", "SMLm_w9", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x65, "SmartLIGHT White Mesh 9W", "ESMLm_w9", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x69, "Ceiling GIRON 60", "ECeil_g60", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x6A, "SmartLIGHT Bulb A60 Warm", "SMLm_w9w", MANUFACTURER_AWOX);
-    // this->add_device(DEVICE_TYPE_TW, 0x6F, "EGLOBulb Filament G80", "ESMLFm-w6-G80", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x71, "EGLOBulb Filament ST64", "ESMLFm-w6-ST64", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x75, "EGLOBulb Filament G95", "ESMLFm-w6-G95", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x77, "EGLO Spot", "ESpot_c5", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x78, "EGLO Fraioli", "EFraioli_c17", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x79, "EGLO Frattina", "EFrattina_c18", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x7A, "EGLO Frattina", "EFrattina_c27", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x7B, "EGLOPanel 30 Round", "EPanel_r300", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x7C, "EGLOPanel 45 Round", "EPanel_r450", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x7D, "EGLOPanel 60 Round", "EPanel_r600", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x7E, "EGLOPanel 10X120", "EPanel_120_10", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x80, "EPanel white round", "EPanel_w_round", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x81, "EPanel white square", "EPanel_w_square", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x82, "EPanel white rectangle", "EPanel_w_rect", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x83, "ECeiling white round", "ECeiling-w", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x87, "EGLO Tunable White", "EDoubleWhite", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x88, "EGLO Ceiling GIRON 80", "ECeil_g80", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x89, "Outdoor Marchesa-C", "EMarchesa_C", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x8A, "Outdoor Francari-C", "EFrancari_C", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x92, "EPanel square", "EPanel_36W_square", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0x94, "EGLOBulb Filament ST64", "ESMLFm-w6w-ST64", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0x95, "EGLOBulb Filament G95", "ESMLFm-w6w-G95", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x96, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x97, "EGLO Tunable White", "EGLO-TW", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x99, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0x9A, "EGLO Tunable White", "JBT_Gen_CCT_1", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0x9B, "EGLO Tunable White", "JBT_Gen_Dim_1", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xA1, "EGLOLed Relax", "ELedRelax", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xA2, "EGLOLed Stripe", "ELedStripe", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xA3, "EGLOLed Plus", "ELedPlus", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0xA4, "EGLOLed Plus TW", "ELedPlus-TW", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0xA5, "EGLOLed Plus Dimmable", "ELedPlus-Dimm", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0xA6, "EGLOBulb", "ESMLFm-w6-TW", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_DIM, 0xA7, "EGLOBulb", "ESMLFm-w6-Dimm", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xA8, "ECeiling square", "ECeiling-24W-square", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xA9, "EGLO RGB+TW", "EGLO-RGB-TW-IPSU", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0xAA, "EGLO Tunable White", "EGLO-TW-IPSU", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0xAC, "EGLO frameless", "EPanel-Frameless", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0xAD, "EGLO Tunable White", "EDoubleWhite-ipsu", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x37, "SmartLIGHT Color Mesh 5W GU10", "SMLm_c5_GU10", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x38, "SmartLIGHT Color Mesh 5W E14", "SMLm_c5_E14", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x3A, "Keria SmartLIGHT Color Mesh 5W GU10", "KSMLm_c5_GU10", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x3B, "Keria SmartLIGHT Color Mesh 5W E14", "KSMLm_c5_E14", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x3C, "SmartLIGHT Color Mesh 5W GU10", "ESMLm_c5_GU10", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x3D, "SmartLIGHT Color Mesh 5W E14", "ESMLm_c5_E14", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x3F, "EGLO Surface round", "EFueva_225r", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x40, "EGLO Surface square", "EFueva_225s", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x41, "EGLO Surface round", "EFueva_300r", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x42, "EGLO Surface square", "EFueva_300s", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x43, "SmartLIGHT Color Mesh 9W", "SMLm_c9s", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x44, "SmartLIGHT Color Mesh 13W", "SMLm_c13gs", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x45, "EGLOBulb A60 9W", "ESMLm_c9s", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x46, "EGLOBulb G95 13W", "ESMLm_c13gs", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x47, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9s", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x48, "Keria SmartLIGHT Color Mesh 13W Glob", "KSMLm_c13gs", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_DIM, 0x49, "EGLOBulb A60 Warm", "ESMLm_w9w", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0x4A, "EGLOBulb A60 Neutral", "ESMLm_w9n", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x4B, "EGLO Ceiling", "ECeiling_30", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x4C, "EGLO Pendant", "EPendant_30", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x4D, "EGLO Pendant", "EPendant_20", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x4E, "EGLO Stripled 3m", "EStrip_3m", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x4F, "EGLO Stripled 5m", "EStrip_5m", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0x50, "Outdoor", "EOutdoor_w14w", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x51, "EGLOSpot", "ETriSpot_85", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x53, "SmartLIGHT Color Mesh 9W", "SMLm_c9i", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x54, "EGLOBulb A60 9W", "ESMLm_c9i", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x55, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9i", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x56, "EGLOPanel 62X62", "EPanel_620", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x57, "EGLOPanel 45X45", "EPanel_450", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x59, "SmartLIGHT Color Mesh 13W Globe", "SMLm_c13gi", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_RGB, 0x5A, "EGLOBulb G95 13W", "ESMLm_c13gi", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x5B, "Keria SmartLIGHT Color Mesh 13W Globe", "KSMLm_c13gi", MANUFACTURER_KERIA);
+    this->add_device(DEVICE_TYPE_RGB, 0x5C, "SmartLIGHT Color Mesh 9W", "SSMLm_c9i", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x64, "SmartLIGHT White Mesh 9W", "SMLm_w9", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x65, "SmartLIGHT White Mesh 9W", "ESMLm_w9", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x69, "Ceiling GIRON 60", "ECeil_g60", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x6A, "SmartLIGHT Bulb A60 Warm", "SMLm_w9w", MANUFACTURER_AWOX);
+    this->add_device(DEVICE_TYPE_TW, 0x6F, "EGLOBulb Filament G80", "ESMLFm-w6-G80", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x71, "EGLOBulb Filament ST64", "ESMLFm-w6-ST64", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x75, "EGLOBulb Filament G95", "ESMLFm-w6-G95", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x77, "EGLO Spot", "ESpot_c5", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x78, "EGLO Fraioli", "EFraioli_c17", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x79, "EGLO Frattina", "EFrattina_c18", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x7A, "EGLO Frattina", "EFrattina_c27", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x7B, "EGLOPanel 30 Round", "EPanel_r300", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x7C, "EGLOPanel 45 Round", "EPanel_r450", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x7D, "EGLOPanel 60 Round", "EPanel_r600", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x7E, "EGLOPanel 10X120", "EPanel_120_10", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x80, "EPanel white round", "EPanel_w_round", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x81, "EPanel white square", "EPanel_w_square", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x82, "EPanel white rectangle", "EPanel_w_rect", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x83, "ECeiling white round", "ECeiling-w", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x87, "EGLO Tunable White", "EDoubleWhite", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x88, "EGLO Ceiling GIRON 80", "ECeil_g80", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x89, "Outdoor Marchesa-C", "EMarchesa_C", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x8A, "Outdoor Francari-C", "EFrancari_C", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x92, "EPanel square", "EPanel_36W_square", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0x94, "EGLOBulb Filament ST64", "ESMLFm-w6w-ST64", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0x95, "EGLOBulb Filament G95", "ESMLFm-w6w-G95", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x96, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x97, "EGLO Tunable White", "EGLO-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x99, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0x9A, "EGLO Tunable White", "JBT_Gen_CCT_1", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0x9B, "EGLO Tunable White", "JBT_Gen_Dim_1", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xA1, "EGLOLed Relax", "ELedRelax", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xA2, "EGLOLed Stripe", "ELedStripe", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xA3, "EGLOLed Plus", "ELedPlus", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0xA4, "EGLOLed Plus TW", "ELedPlus-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0xA5, "EGLOLed Plus Dimmable", "ELedPlus-Dimm", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0xA6, "EGLOBulb", "ESMLFm-w6-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_DIM, 0xA7, "EGLOBulb", "ESMLFm-w6-Dimm", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xA8, "ECeiling square", "ECeiling-24W-square", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xA9, "EGLO RGB+TW", "EGLO-RGB-TW-IPSU", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0xAA, "EGLO Tunable White", "EGLO-TW-IPSU", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0xAC, "EGLO frameless", "EPanel-Frameless", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0xAD, "EGLO Tunable White", "EDoubleWhite-ipsu", MANUFACTURER_EGLO);
 
     this->add_device(DEVICE_TYPE_PLUG, 0x97, "EGLO PLUG PLUS", "SMPWBm10AUS", MANUFACTURER_EGLO, "mdi:power-socket-au");
     this->add_device(DEVICE_TYPE_PLUG, 0x9E, "EGLO PLUG PLUS", "SMPWBm10AUSb", MANUFACTURER_EGLO,
