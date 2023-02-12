@@ -15,6 +15,25 @@ status_led:
 logger:
   #level: VERY_VERBOSE
 
+debug:
+  update_interval: 5s
+
+text_sensor:
+  - platform: debug
+    device:
+      name: "Device Info"
+    reset_reason:
+      name: "Reset Reason"
+
+sensor:
+  - platform: debug
+    free:
+      name: "Heap Free"
+    block:
+      name: "Heap Max Block"
+    loop_time:
+      name: "Loop Time"
+
 mqtt:
   broker: !secret mqtt_host
   username: !secret mqtt_user

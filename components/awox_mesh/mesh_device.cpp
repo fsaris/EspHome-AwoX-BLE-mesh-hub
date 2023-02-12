@@ -61,10 +61,11 @@ static unsigned char turn_off_bit(unsigned char value, int bit) {
   return value;
 }
 
-static std::string get_product_code(unsigned char part1, unsigned char part2) {
-  char value[4];
-  sprintf(value, "%02X%02X", turn_off_bit(part1, 16), part2);
-  return std::string((char *) value, 4);
+static int get_product_code(unsigned char part1, unsigned char part2) {
+  return int(part2);
+  // char value[4];
+  // sprintf(value, "%02X%02X", turn_off_bit(part1, 16), part2);
+  // return std::string((char *) value, 4);
 }
 
 static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
@@ -374,8 +375,8 @@ void MeshDevice::handle_packet(std::string &packet) {
     device->device_info = this->device_info_resolver->get_by_product_id(
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12])));
 
-    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %s mac: %s => %s", mesh_id,
-             device->device_info->get_product_id().c_str(), device->mac.c_str(), TextToBinaryString(packet).c_str());
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %02X mac: %s => %s", mesh_id, device->device_info->get_product_id(),
+             device->mac.c_str(), TextToBinaryString(packet).c_str());
 
     this->send_discovery(device);
     return;
@@ -557,8 +558,6 @@ void MeshDevice::send_discovery(Device *device) {
         }
 
         // Device
-        const std::string &node_name = App.get_name();
-
         JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
 
         JsonArray identifiers = device_info.createNestedArray(MQTT_DEVICE_IDENTIFIERS);
@@ -568,7 +567,7 @@ void MeshDevice::send_discovery(Device *device) {
         device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
         device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
-        device_info["via_device"] = node_name;
+        device_info["via_device"] = get_mac_address();
       },
       0, discovery_info.retain);
 
