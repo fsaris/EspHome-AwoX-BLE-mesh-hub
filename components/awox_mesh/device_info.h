@@ -90,6 +90,7 @@ class DeviceInfoResolver {
     this->add_device(new MeshLightColor("0032", "Spot 120", "EGLOSpot 120/w", "EGLO", "mdi:wall-sconce-flat"));
     this->add_device(new MeshLightColor("0033", "Spot 170", "EGLOSpot 170/w", "EGLO", "mdi:wall-sconce-flat"));
     this->add_device(new MeshLightColor("0034", "Spot 225", "EGLOSpot 225/w", "EGLO", "mdi:wall-sconce-flat"));
+    this->add_device(new MeshLightColor("0035", "Giron-C 17W", "EGLO 32589", "EGLO", "mdi:wall-sconce-flat"));
 
     this->add_device(new MeshPlug("0097", "EGLO PLUG PLUS", "SMPWBm10AUS", "EGLO", "mdi:power-socket-au"));
     this->add_device(new MeshPlug("009E", "EGLO PLUG PLUS", "SMPWBm10AUSb", "EGLO", "mdi:power-socket-au"));
