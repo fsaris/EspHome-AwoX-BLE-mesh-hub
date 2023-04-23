@@ -212,7 +212,7 @@ class DeviceInfoResolver {
     // this->add_device(DEVICE_TYPE_RGB, 0x4E, "EGLO Stripled 3m", "EStrip_3m", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x4F, "EGLO Stripled 5m", "EStrip_5m", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_DIM, 0x50, "Outdoor", "EOutdoor_w14w", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x51, "EGLOSpot", "ETriSpot_85", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x51, "EGLOSpot", "ETriSpot_85", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x53, "SmartLIGHT Color Mesh 9W", "SMLm_c9i", MANUFACTURER_AWOX);
     // this->add_device(DEVICE_TYPE_RGB, 0x54, "EGLOBulb A60 9W", "ESMLm_c9i", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x55, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9i", MANUFACTURER_KERIA);
