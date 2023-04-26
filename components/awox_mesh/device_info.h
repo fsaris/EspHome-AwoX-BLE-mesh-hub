@@ -258,7 +258,7 @@ class DeviceInfoResolver {
     // this->add_device(DEVICE_TYPE_RGB, 0xA3, "EGLOLed Plus", "ELedPlus", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_TW, 0xA4, "EGLOLed Plus TW", "ELedPlus-TW", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_DIM, 0xA5, "EGLOLed Plus Dimmable", "ELedPlus-Dimm", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_TW, 0xA6, "EGLOBulb", "ESMLFm-w6-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_TW, 0xA6, "EGLOBulb", "ESMLFm-w6-TW", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_DIM, 0xA7, "EGLOBulb", "ESMLFm-w6-Dimm", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0xA8, "ECeiling square", "ECeiling-24W-square", MANUFACTURER_EGLO);
     this->add_device(DEVICE_TYPE_RGB, 0xA9, "EGLO RGB+TW", "EGLO-RGB-TW-IPSU", MANUFACTURER_EGLO);
