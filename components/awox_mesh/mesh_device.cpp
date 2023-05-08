@@ -61,12 +61,7 @@ static unsigned char turn_off_bit(unsigned char value, int bit) {
   return value;
 }
 
-static int get_product_code(unsigned char part1, unsigned char part2) {
-  return int(part2);
-  // char value[4];
-  // sprintf(value, "%02X%02X", turn_off_bit(part1, 16), part2);
-  // return std::string((char *) value, 4);
-}
+static int get_product_code(unsigned char part1, unsigned char part2) { return int(part2); }
 
 static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
   char value[17];
@@ -467,27 +462,40 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
 }
 
 void MeshDevice::publish_state(Device *device) {
-  global_mqtt_client->publish_json(
-      this->get_mqtt_topic_for_(device, "state"),
-      [this, device](JsonObject root) {
-        root["state"] = device->state ? "ON" : "OFF";
+  if (device->mac == "") {
+    ESP_LOGW(TAG, "'%s': Can not yet send publish state, mac address not known...",
+             std::to_string(device->mesh_id).c_str());
+    return;
+  }
+  if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+    global_mqtt_client->publish_json(
+        this->get_mqtt_topic_for_(device, "state"),
+        [this, device](JsonObject root) {
+          root["state"] = device->state ? "ON" : "OFF";
 
-        root["color_mode"] = "color_temp";
+          root["color_mode"] = "color_temp";
 
-        root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
+          root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
 
-        if (device->color_mode) {
-          root["color_mode"] = "rgb";
-          root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
-        } else {
-          root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
-        }
-        JsonObject color = root.createNestedObject("color");
-        color["r"] = device->R;
-        color["g"] = device->G;
-        color["b"] = device->B;
-      },
-      0, true);
+          if (device->color_mode) {
+            root["color_mode"] = "rgb";
+            root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
+          } else {
+            root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
+          }
+          JsonObject color = root.createNestedObject("color");
+          color["r"] = device->R;
+          color["g"] = device->G;
+          color["b"] = device->B;
+        },
+        0, true);
+  } else {
+    global_mqtt_client->publish(
+        this->get_mqtt_topic_for_(device, "state"),
+        device->state ? "ON" : "OFF",
+        device->state ? 2 : 3
+    );
+  }
 }
 
 void MeshDevice::send_discovery(Device *device) {
@@ -565,15 +573,42 @@ void MeshDevice::send_discovery(Device *device) {
         identifiers.add(device->mac);
 
         device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
+        ESP_LOGI(TAG, "Model %s", device->device_info->get_model());
         device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = get_mac_address();
       },
       0, discovery_info.retain);
 
-  global_mqtt_client->subscribe_json(
-      this->get_mqtt_topic_for_(device, "command"),
-      [this, device](const std::string &topic, JsonObject root) { this->process_incomming_command(device, root); });
+  if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+    global_mqtt_client->subscribe_json(
+        this->get_mqtt_topic_for_(device, "command"),
+        [this, device](const std::string &topic, JsonObject root) { this->process_incomming_command(device, root); });
+  } else {
+    global_mqtt_client->subscribe(
+        this->get_mqtt_topic_for_(device, "command"),
+        [this, device](const std::string &topic, const std::string &payload) {
+                  ESP_LOGI(TAG, "command %s - %s", topic.c_str(), payload.c_str());
+          auto val = parse_on_off(payload.c_str());
+          switch (val) {
+            case PARSE_ON:
+              device->state = true;
+              this->set_state(device->mesh_id, true);
+              break;
+            case PARSE_OFF:
+              device->state = false;
+              this->set_state(device->mesh_id, false);
+              break;
+            case PARSE_TOGGLE:
+              device->state = !device->state;
+              this->set_state(device->mesh_id, device->state);
+              break;
+            case PARSE_NONE:
+              break;
+          }
+      });
+  }
+  this->publish_availability(device, true);
 }
 
 void MeshDevice::process_incomming_command(Device *device, JsonObject root) {
