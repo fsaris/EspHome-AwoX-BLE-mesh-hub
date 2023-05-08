@@ -35,6 +35,9 @@ mqtt:
   username: !secret mqtt_user
   password: !secret mqtt_password
 
+# Disable Home Assistant API to prevent frequent MQTT disconnections
+#api:
+
 ota:
   password: "988af1bdbc81aa0760c360430673b560"
 
