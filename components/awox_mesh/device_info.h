@@ -249,7 +249,7 @@ class DeviceInfoResolver {
     // this->add_device(DEVICE_TYPE_RGB, 0x92, "EPanel square", "EPanel_36W_square", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_DIM, 0x94, "EGLOBulb Filament ST64", "ESMLFm-w6w-ST64", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_DIM, 0x95, "EGLOBulb Filament G95", "ESMLFm-w6w-G95", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x96, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x96, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_TW, 0x97, "EGLO Tunable White", "EGLO-TW", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x99, "EGLO RGB+TW", "EGLO-RGB-TW", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_TW, 0x9A, "EGLO Tunable White", "JBT_Gen_CCT_1", MANUFACTURER_EGLO);
