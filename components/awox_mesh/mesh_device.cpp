@@ -88,6 +88,7 @@ void MeshDevice::on_shutdown() {
     this->devices_[i]->online = false;
     this->publish_availability(this->devices_[i], false);
   }
+  this->publish_connected(false);
 }
 
 void MeshDevice::loop() {
@@ -243,6 +244,8 @@ void MeshDevice::setup_connection() {
   ESP_LOGD(TAG, "Enable notifications");
   uint16_t notify_en = 1;
   this->notification_char->write_value((uint8_t *) &notify_en, sizeof(notify_en));
+
+  this->publish_connected(true);
 }
 
 std::string MeshDevice::combine_name_and_password() const {
@@ -467,6 +470,12 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
   global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
+void MeshDevice::publish_connected(bool connected) {
+  const std::string message = connected ? "online" : "offline";
+  ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
+  global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
+}
+
 void MeshDevice::publish_state(Device *device) {
   if (device->mac == "") {
     ESP_LOGW(TAG, "'%s': Can not yet send publish state, mac address not known...",
@@ -537,6 +546,8 @@ void MeshDevice::send_discovery(Device *device) {
         availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
         auto availability_topic_2 = availability.createNestedObject();
         availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+        auto availability_topic_3 = availability.createNestedObject();
+        availability_topic_3[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connected";
         root[MQTT_AVAILABILITY_MODE] = "all";
 
         // Features

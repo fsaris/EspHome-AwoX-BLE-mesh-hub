@@ -137,6 +137,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   void publish_availability(Device *device, bool delayed);
 
+  void publish_connected(bool connected);
+
   void process_incomming_command(Device *device, JsonObject root);
 
   void queue_command(int command, const std::string &data, int dest = 0);
@@ -205,6 +207,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
                            esp_ble_gattc_cb_param_t *param) override;
 
   void set_address(uint64_t address) {
+
+    this->publish_connected(false);
     BLEClientBase::set_address(address);
 
     if (address == 0) {
