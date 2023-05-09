@@ -297,9 +297,7 @@ class DeviceInfoResolver {
       return this->create_device_info(product_id, devices[product_id]);
     }
 
-    return this->create_device_info(DEVICE_TYPE_DIM, product_id, "Unknown device type",
-                                    this->get_product_code_as_hex_string(product_id), MANUFACTURER_AWOX,
-                                    "mdi:lightbulb-help-outline");
+    return this->create_device_info(DEVICE_TYPE_DIM, product_id, "Unknown device type", "", MANUFACTURER_AWOX, "mdi:lightbulb-help-outline");
   }
 };
 

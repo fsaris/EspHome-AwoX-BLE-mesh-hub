@@ -63,6 +63,12 @@ static unsigned char turn_off_bit(unsigned char value, int bit) {
 
 static int get_product_code(unsigned char part1, unsigned char part2) { return int(part2); }
 
+static std::string get_product_code_as_hex_string(int product_id) {
+    char value[15];
+    sprintf(value, "Product: 0x%02X", product_id);
+    return std::string((char *) value, 15);
+  }
+
 static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
   char value[17];
   sprintf(value, "A4:C1:%02X:%02X:%02X:%02X", part3, part4, part5, part6);
@@ -573,8 +579,12 @@ void MeshDevice::send_discovery(Device *device) {
         identifiers.add(device->mac);
 
         device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
-        ESP_LOGI(TAG, "Model %s", device->device_info->get_model());
-        device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
+
+        if (device->device_info->get_model() == "") {
+          device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id());
+        } else {
+          device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
+        }
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = get_mac_address();
       },
