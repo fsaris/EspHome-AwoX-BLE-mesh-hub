@@ -15,6 +15,8 @@ You will need your mesh credentials, easiest way to find them when comming from 
 
 When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
 
+In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
+
 ### Requirements
 - ESP32 module
 - ESPHome 2022.12.0 or newer
