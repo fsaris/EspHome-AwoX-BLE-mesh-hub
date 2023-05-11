@@ -1,5 +1,6 @@
 esphome:
   name: "awox-ble-mesh-hub"
+  friendly_name: "AwoX BLE mesh hub"
 
 esp32:
   board: esp32dev
@@ -15,20 +16,20 @@ status_led:
 logger:
   #level: VERY_VERBOSE
 
-debug:
-  update_interval: 5s
+# debug:
+#   update_interval: 5s
 
 text_sensor:
   - platform: debug
     reset_reason:
       name: "Reset Reason"
 
-sensor:
-  - platform: debug
-    free:
-      name: "Heap Free"
-    loop_time:
-      name: "Loop Time"
+# sensor:
+#   - platform: debug
+#     free:
+#       name: "Heap Free"
+#     loop_time:
+#       name: "Loop Time"
 
 mqtt:
   broker: !secret mqtt_host
@@ -58,3 +59,11 @@ esp32_ble_tracker:
 awox_mesh:
   mesh_name: !secret mesh_name
   mesh_password: !secret mesh_password
+  device_info:
+    # Example device type, see device info in HomeAssistant or MQTT message to find the 'product_id'
+    - product_id: 0x32
+      device_type: RGB
+      manufacturer: EGLO
+      name: Spot 120
+      model: EGLOSpot 120/w
+      icon: mdi:wall-sconce-flat

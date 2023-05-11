@@ -199,6 +199,10 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
     this->mesh_password = mesh_password;
   }
 
+  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer, const char *icon) {
+    this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
+  }
+
   void loop() override;
 
   void on_shutdown() override;
