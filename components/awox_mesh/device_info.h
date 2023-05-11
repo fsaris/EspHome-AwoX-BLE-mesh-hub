@@ -178,7 +178,7 @@ class DeviceInfoResolver {
     this->add_device(DEVICE_TYPE_RGB, 0x25, "EGLOPanel 30X30", "EPanel_300", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x26, "EGLOPanel 60X60", "EPanel_600", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x27, "EGLO Ceiling DOWNLIGHT", "EMod_Ceil", MANUFACTURER_EGLO);
-    // this->add_device(DEVICE_TYPE_RGB, 0x29, "EGLOBulb G95 13W", "ESMLm_c13g", MANUFACTURER_EGLO);
+    this->add_device(DEVICE_TYPE_RGB, 0x29, "EGLOBulb G95 13W", "ESMLm_c13g", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x2A, "Keria SmartLIGHT Color Mesh 13W Globe", "KSMLm_c13g",
     // MANUFACTURER_KERIA); this->add_device(DEVICE_TYPE_RGB, 0x2B, "SmartLIGHT Color Mesh 13W Globe", "SMLm_c13g",
     // MANUFACTURER_AWOX);
@@ -205,8 +205,9 @@ class DeviceInfoResolver {
     // this->add_device(DEVICE_TYPE_RGB, 0x46, "EGLOBulb G95 13W", "ESMLm_c13gs", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x47, "Keria SmartLIGHT Color Mesh 9W", "KSMLm_c9s", MANUFACTURER_KERIA);
     // this->add_device(DEVICE_TYPE_RGB, 0x48, "Keria SmartLIGHT Color Mesh 13W Glob", "KSMLm_c13gs",
-    // MANUFACTURER_KERIA); this->add_device(DEVICE_TYPE_DIM, 0x49, "EGLOBulb A60 Warm", "ESMLm_w9w",
-    // MANUFACTURER_EGLO); this->add_device(DEVICE_TYPE_DIM, 0x4A, "EGLOBulb A60 Neutral", "ESMLm_w9n",
+    // MANUFACTURER_KERIA); 
+    this->add_device(DEVICE_TYPE_DIM, 0x49, "EGLOBulb A60 Warm", "ESMLm_w9w", MANUFACTURER_EGLO); 
+    //this->add_device(DEVICE_TYPE_DIM, 0x4A, "EGLOBulb A60 Neutral", "ESMLm_w9n",
     // MANUFACTURER_EGLO); this->add_device(DEVICE_TYPE_RGB, 0x4B, "EGLO Ceiling", "ECeiling_30", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x4C, "EGLO Pendant", "EPendant_30", MANUFACTURER_EGLO);
     // this->add_device(DEVICE_TYPE_RGB, 0x4D, "EGLO Pendant", "EPendant_20", MANUFACTURER_EGLO);
