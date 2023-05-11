@@ -733,6 +733,9 @@ device_info:
 ```
 </details>
 
+In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
+
+
 ### Requirements
 - ESP32 module
 - ESPHome 2023.2.0 or newer
