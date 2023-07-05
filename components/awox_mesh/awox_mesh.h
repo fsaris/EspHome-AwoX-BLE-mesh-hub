@@ -48,11 +48,17 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
     ESP_LOGD("AwoxMesh", "register_connection");
     this->connection = connection;
   }
+  void set_address_prefix(const std::string &address_prefix) {
+    ESP_LOGI("AwoxMesh", "address_prefix: %s", address_prefix.c_str());
+    this->address_prefix = address_prefix;
+  }
+
   void loop() override;
 
  protected:
   MeshDevice *connection;
   std::vector<FoundDevice> devices_{};
+  std::string address_prefix = "A4:C1";
 };
 
 }  // namespace awox_mesh

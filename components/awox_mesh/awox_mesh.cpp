@@ -34,7 +34,7 @@ FoundDevice AwoxMesh::add_to_devices(const esp32_ble_tracker::ESPBTDevice &devic
 }
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  if (device.address_str().rfind("A4:C1", 0) != 0) {
+  if (device.address_str().rfind(this->address_prefix, 0) != 0) {
     return false;
   }
 
