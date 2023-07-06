@@ -59,6 +59,7 @@ esp32_ble_tracker:
 awox_mesh:
   mesh_name: !secret mesh_name
   mesh_password: !secret mesh_password
+  address_prefix: A4:C1
   device_info:
     # Example device type, see device info in HomeAssistant or MQTT message to find the 'product_id'
     - product_id: 0x32

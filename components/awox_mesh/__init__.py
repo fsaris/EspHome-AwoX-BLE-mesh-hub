@@ -31,6 +31,7 @@ CONFIG_SCHEMA = (
             cv.GenerateID(): cv.declare_id(Awox),
             cv.Required("mesh_name"): cv.string_strict,
             cv.Required("mesh_password"): cv.string_strict,
+            cv.Required("address_prefix"): cv.string_strict,
             cv.Optional("connection", {}): CONNECTION_SCHEMA,
             cv.Optional("device_info", default=[]): cv.ensure_list(
                 cv.Schema(
@@ -74,6 +75,7 @@ async def to_code(config):
 
     await cg.register_component(connection_var, config["connection"])
     cg.add(var.register_connection(connection_var))
+    cg.add(var.set_address_prefix(config["address_prefix"]))
     await esp32_ble_tracker.register_client(connection_var, config["connection"])
 
     # Crypto
