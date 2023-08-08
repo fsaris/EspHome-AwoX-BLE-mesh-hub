@@ -42,7 +42,7 @@ mqtt:
 #api:
 
 ota:
-  password: "988af1bdbc81aa0760c360430673b560"
+  password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
