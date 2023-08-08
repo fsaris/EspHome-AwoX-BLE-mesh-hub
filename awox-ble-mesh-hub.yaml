@@ -1,7 +1,5 @@
 esphome:
   name: awox-ble-mesh-hub
-  name: "awox-ble-mesh-hub"
-  name: awox-ble-mesh-hub
   friendly_name: "AwoX BLE mesh hub"
 
 esp32:
