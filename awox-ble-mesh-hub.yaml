@@ -1,5 +1,5 @@
 esphome:
-  name: "awox-ble-mesh-hub"
+  name: awox-ble-mesh-hub
   friendly_name: "AwoX BLE mesh hub"
 
 esp32:
@@ -16,8 +16,8 @@ status_led:
 logger:
   #level: VERY_VERBOSE
 
-# debug:
-#   update_interval: 5s
+debug:
+  update_interval: 5s
 
 text_sensor:
   - platform: debug
@@ -47,10 +47,10 @@ wifi:
   password: !secret wifi_password
 
 external_components:
-  source: github://fsaris/EspHome-AwoX-BLE-mesh-hub
-  # - source:
-  #     type: local
-  #     path: components
+  # source: github://fsaris/EspHome-AwoX-BLE-mesh-hub
+  - source:
+      type: local
+      path: components
 
 esp32_ble_tracker:
   scan_parameters:

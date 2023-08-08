@@ -529,7 +529,7 @@ void MeshDevice::send_discovery(Device *device) {
         root["schema"] = "json";
 
         // Entity
-        root[MQTT_NAME] = device->device_info->get_name();
+        root[MQTT_NAME] = nullptr;
         root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->device_info->get_component_type();
 
         if (device->device_info->get_icon() != "") {
@@ -589,7 +589,7 @@ void MeshDevice::send_discovery(Device *device) {
         identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
         identifiers.add(device->mac);
 
-        device_info[MQTT_DEVICE_NAME] = root[MQTT_NAME];
+        device_info[MQTT_DEVICE_NAME] = device->device_info->get_name();
 
         if (device->device_info->get_model() == "") {
           device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id());
