@@ -742,7 +742,7 @@ In case of using a WLAN with hidden SSID, mind to use the multiple netowrk optio
 - MQTT broker
 
 ### Recomendations
-- HomeAssistant 2022.12.0 or newer
+- HomeAssistant 2023.8.0 or newer
 - ESPHome add-on for HomeAssistant
 
 
