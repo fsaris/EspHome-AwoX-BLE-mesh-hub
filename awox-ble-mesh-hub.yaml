@@ -18,17 +18,13 @@ status_led:
 logger:
   #level: VERY_VERBOSE
 
-debug:
-  update_interval: 5s
 # debug:
 #   update_interval: 5s
-debug:
-  update_interval: 5s
 
-text_sensor:
-  - platform: debug
-    reset_reason:
-      name: "Reset Reason"
+# text_sensor:
+#   - platform: debug
+#     reset_reason:
+#      name: "Reset Reason"
 
 # sensor:
 #   - platform: debug
