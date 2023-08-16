@@ -6,11 +6,9 @@ esp32:
   board: esp32dev
   framework:
     type: arduino
-    # Set to fixed version due to build issues https://community.home-assistant.io/t/esphome-could-not-find-package-json/499026/8
-    version: 2.0.6 #https://github.com/espressif/arduino-esp32/releases
 
-status_led:
-  pin: GPIO2
+# status_led:
+#   pin: GPIO2
 
 # Enable logging
 logger:
