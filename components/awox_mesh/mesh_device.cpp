@@ -5,9 +5,7 @@
 #include <math.h>
 #include "mesh_device.h"
 #include "device_info.h"
-#include <AES.h>
-#include <Crypto.h>
-#include <GCM.h>
+#include "mbedtls/aes.h"
 #include "esphome/core/application.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/helpers.h"
@@ -33,12 +31,12 @@ static std::string encrypt(std::string key, std::string data) {
   std::reverse(data.begin(), data.end());
 
   unsigned char buffer[16];
-  auto aes128 = AES128();
 
-  if (!aes128.setKey((uint8_t *) key.c_str(), key.size())) {
-    ESP_LOGE(TAG, "Failed to set key");
-  };
-  aes128.encryptBlock(buffer, (uint8_t *) data.c_str());
+  mbedtls_aes_context aes;
+  mbedtls_aes_init(&aes);
+  mbedtls_aes_setkey_enc(&aes, (const unsigned char*) key.c_str(), key.size() * 8);
+  mbedtls_aes_crypt_ecb(&aes, 1, (const unsigned char*)data.c_str(), buffer);
+  mbedtls_aes_free(&aes);
 
   std::string result = std::string((char *) buffer, 16);
 
