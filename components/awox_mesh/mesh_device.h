@@ -213,6 +213,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
   void set_address(uint64_t address) {
 
     this->publish_connected(false);
+    this->set_state(esp32_ble_tracker::ClientState::IDLE);
+
     BLEClientBase::set_address(address);
 
     if (address == 0) {
