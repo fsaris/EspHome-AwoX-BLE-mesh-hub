@@ -28,6 +28,7 @@ struct FoundDevice {
   uint64_t address{0};
   int rssi{0};
   uint32_t last_detected;
+  esp32_ble_tracker::ESPBTDevice device;
 };
 
 class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component {

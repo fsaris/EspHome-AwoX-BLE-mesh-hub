@@ -24,6 +24,7 @@ FoundDevice AwoxMesh::add_to_devices(const esp32_ble_tracker::ESPBTDevice &devic
   found.address = device.address_uint64();
   found.rssi = device.get_rssi();
   found.last_detected = esphome::millis();
+  found.device = device;
   this->devices_.push_back(found);
 
   this->remove_devices_that_are_not_available();
@@ -62,7 +63,7 @@ void AwoxMesh::loop() {
 
     ESP_LOGI(TAG, "Try to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
     this->connection->set_address(device.address);
-    this->connection->connect();
+    this->connection->parse_device(device.device);
 
     this->set_timeout("connecting", 20000, [this, device]() {
       if (this->connection->connected()) {
