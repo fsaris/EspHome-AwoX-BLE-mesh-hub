@@ -5,10 +5,6 @@
 #include <map>
 #include <vector>
 
-#include <AES.h>
-#include <Crypto.h>
-#include <GCM.h>
-
 #include "esphome/core/hal.h"
 #include "esphome/components/esp32_ble_client/ble_client_base.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"

@@ -77,6 +77,3 @@ async def to_code(config):
     cg.add(var.register_connection(connection_var))
     cg.add(var.set_address_prefix(config["address_prefix"]))
     await esp32_ble_tracker.register_client(connection_var, config["connection"])
-
-    # Crypto
-    cg.add_library("rweather/Crypto", "0.4.0")
