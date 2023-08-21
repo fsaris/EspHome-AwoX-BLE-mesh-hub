@@ -3,12 +3,12 @@ esphome:
   friendly_name: "AwoX BLE mesh hub"
 
 esp32:
-  board: esp32dev
-  framework:
-    type: arduino
+  # Match this with the board your using
+  board: nodemcu-32s
 
-# status_led:
-#   pin: GPIO2
+status_led:
+  # Match this with the board your using
+  pin: GPIO2
 
 # Enable logging
 logger:
@@ -46,8 +46,8 @@ wifi:
 
 external_components:
   - source:
-     type: git
-     url: https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub
+      type: git
+      url: https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub
   #  ref: dev
   # - source:
   #     type: local
