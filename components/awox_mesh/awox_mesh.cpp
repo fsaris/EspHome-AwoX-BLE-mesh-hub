@@ -1,5 +1,3 @@
-#pragma once
-
 #ifdef USE_ESP32
 #include <cstring>
 #include <cstdio>

@@ -5,7 +5,7 @@
 #include <math.h>
 #include "mesh_device.h"
 #include "device_info.h"
-#include "mbedtls/aes.h"
+#include "aes/esp_aes.h"
 #include "esphome/core/application.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/helpers.h"
@@ -32,11 +32,11 @@ static std::string encrypt(std::string key, std::string data) {
 
   unsigned char buffer[16];
 
-  mbedtls_aes_context aes;
-  mbedtls_aes_init(&aes);
-  mbedtls_aes_setkey_enc(&aes, (const unsigned char*) key.c_str(), key.size() * 8);
-  mbedtls_aes_crypt_ecb(&aes, 1, (const unsigned char*)data.c_str(), buffer);
-  mbedtls_aes_free(&aes);
+  esp_aes_context aes;
+  esp_aes_init(&aes);
+  esp_aes_setkey(&aes, (const unsigned char *) key.c_str(), key.size() * 8);
+  esp_aes_crypt_ecb(&aes, 1, (const unsigned char *) data.c_str(), buffer);
+  esp_aes_free(&aes);
 
   std::string result = std::string((char *) buffer, 16);
 
@@ -47,7 +47,7 @@ static std::string encrypt(std::string key, std::string data) {
 }
 
 static std::string int_as_hex_string(unsigned char hex1, unsigned char hex2, unsigned char hex3) {
-  char value[6];
+  char value[7];
   sprintf(value, "%02X%02X%02X", hex1, hex2, hex3);
   return std::string((char *) value, 6);
 }
@@ -62,13 +62,13 @@ static unsigned char turn_off_bit(unsigned char value, int bit) {
 static int get_product_code(unsigned char part1, unsigned char part2) { return int(part2); }
 
 static std::string get_product_code_as_hex_string(int product_id) {
-    char value[15];
-    sprintf(value, "Product: 0x%02X", product_id);
-    return std::string((char *) value, 15);
-  }
+  char value[15];
+  sprintf(value, "Product: 0x%02X", product_id);
+  return std::string((char *) value, 15);
+}
 
 static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
-  char value[17];
+  char value[18];
   sprintf(value, "A4:C1:%02X:%02X:%02X:%02X", part3, part4, part5, part6);
   return std::string((char *) value, 17);
 }
@@ -204,6 +204,9 @@ bool MeshDevice::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t g
       }
       break;
     }
+
+    default:
+      break;
   }
 
   return true;
@@ -325,6 +328,8 @@ void MeshDevice::handle_packet(std::string &packet) {
   int mesh_id, mode;
   bool online, state, color_mode, transition_mode;
   unsigned char white_brightness, temperature, color_brightness, R, G, B;
+
+  mesh_id = 0;
 
   if (static_cast<unsigned char>(packet[7]) == COMMAND_ONLINE_STATUS_REPORT) {  // DC
     mesh_id = (static_cast<unsigned char>(packet[19]) * 256) + static_cast<unsigned char>(packet[10]);
@@ -503,11 +508,8 @@ void MeshDevice::publish_state(Device *device) {
         },
         0, true);
   } else {
-    global_mqtt_client->publish(
-        this->get_mqtt_topic_for_(device, "state"),
-        device->state ? "ON" : "OFF",
-        device->state ? 2 : 3
-    );
+    global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "state"), device->state ? "ON" : "OFF",
+                                device->state ? 2 : 3);
   }
 }
 
@@ -530,7 +532,7 @@ void MeshDevice::send_discovery(Device *device) {
         root[MQTT_NAME] = nullptr;
         root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->device_info->get_component_type();
 
-        if (device->device_info->get_icon() != "") {
+        if (strlen(device->device_info->get_icon()) > 0) {
           root[MQTT_ICON] = device->device_info->get_icon();
         }
 
@@ -589,7 +591,7 @@ void MeshDevice::send_discovery(Device *device) {
 
         device_info[MQTT_DEVICE_NAME] = device->device_info->get_name();
 
-        if (device->device_info->get_model() == "") {
+        if (strlen(device->device_info->get_model()) == 0) {
           device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id());
         } else {
           device_info[MQTT_DEVICE_MODEL] = device->device_info->get_model();
@@ -604,28 +606,27 @@ void MeshDevice::send_discovery(Device *device) {
         this->get_mqtt_topic_for_(device, "command"),
         [this, device](const std::string &topic, JsonObject root) { this->process_incomming_command(device, root); });
   } else {
-    global_mqtt_client->subscribe(
-        this->get_mqtt_topic_for_(device, "command"),
-        [this, device](const std::string &topic, const std::string &payload) {
-                  ESP_LOGI(TAG, "command %s - %s", topic.c_str(), payload.c_str());
-          auto val = parse_on_off(payload.c_str());
-          switch (val) {
-            case PARSE_ON:
-              device->state = true;
-              this->set_state(device->mesh_id, true);
-              break;
-            case PARSE_OFF:
-              device->state = false;
-              this->set_state(device->mesh_id, false);
-              break;
-            case PARSE_TOGGLE:
-              device->state = !device->state;
-              this->set_state(device->mesh_id, device->state);
-              break;
-            case PARSE_NONE:
-              break;
-          }
-      });
+    global_mqtt_client->subscribe(this->get_mqtt_topic_for_(device, "command"),
+                                  [this, device](const std::string &topic, const std::string &payload) {
+                                    ESP_LOGI(TAG, "command %s - %s", topic.c_str(), payload.c_str());
+                                    auto val = parse_on_off(payload.c_str());
+                                    switch (val) {
+                                      case PARSE_ON:
+                                        device->state = true;
+                                        this->set_state(device->mesh_id, true);
+                                        break;
+                                      case PARSE_OFF:
+                                        device->state = false;
+                                        this->set_state(device->mesh_id, false);
+                                        break;
+                                      case PARSE_TOGGLE:
+                                        device->state = !device->state;
+                                        this->set_state(device->mesh_id, device->state);
+                                        break;
+                                      case PARSE_NONE:
+                                        break;
+                                    }
+                                  });
   }
   this->publish_availability(device, true);
 }

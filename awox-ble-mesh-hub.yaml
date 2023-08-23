@@ -5,6 +5,9 @@ esphome:
 esp32:
   # Match this with the board your using
   board: nodemcu-32s
+  framework:
+    # Be sure to "Clean Build Files" when switching framework
+    type: esp-idf
 
 status_led:
   # Match this with the board your using
