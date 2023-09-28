@@ -3,13 +3,14 @@ esphome:
   friendly_name: "AwoX BLE mesh hub"
 
 esp32:
-  board: esp32dev
+  # Match this with the board your using
+  board: nodemcu-32s
   framework:
-    type: arduino
-    # Set to fixed version due to build issues https://community.home-assistant.io/t/esphome-could-not-find-package-json/499026/8
-    version: 2.0.6 #https://github.com/espressif/arduino-esp32/releases
+    # Be sure to "Clean Build Files" when switching framework
+    type: esp-idf
 
 status_led:
+  # Match this with the board your using
   pin: GPIO2
 
 # Enable logging
@@ -47,7 +48,10 @@ wifi:
   password: !secret wifi_password
 
 external_components:
-  source: github://fsaris/EspHome-AwoX-BLE-mesh-hub
+  - source:
+      type: git
+      url: https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub
+  #  ref: dev
   # - source:
   #     type: local
   #     path: components

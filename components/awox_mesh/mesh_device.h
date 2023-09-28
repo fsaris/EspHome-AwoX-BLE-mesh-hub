@@ -199,7 +199,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
     this->mesh_password = mesh_password;
   }
 
-  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer, const char *icon) {
+  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer,
+                       const char *icon) {
     this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
   }
 
@@ -211,8 +212,9 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
                            esp_ble_gattc_cb_param_t *param) override;
 
   void set_address(uint64_t address) {
-
     this->publish_connected(false);
+    this->set_state(esp32_ble_tracker::ClientState::IDLE);
+
     BLEClientBase::set_address(address);
 
     if (address == 0) {
