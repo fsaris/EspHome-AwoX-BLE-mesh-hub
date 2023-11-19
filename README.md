@@ -4,7 +4,7 @@ A ESPhome component (https://esphome.io/components/external_components.html#git)
 
 For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml).
 
-You will need your mesh credentials, easiest way to find/get these is to use [this JSFiddle](https://jsfiddle.net/fsaris/uncm54vb/37/) to read them from your AwoX connect account.
+You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
 When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
 
