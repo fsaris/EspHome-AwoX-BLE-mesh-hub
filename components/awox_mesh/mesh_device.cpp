@@ -465,6 +465,9 @@ void MeshDevice::publish_availability(Device *device, bool delayed) {
     publish.time = esphome::millis();
     this->delayed_availability_publish.push_back(publish);
     ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
+
+    // Force info update request
+    this->request_status_update(device->mesh_id);
     return;
   }
 
@@ -817,6 +820,8 @@ bool MeshDevice::set_white_temperature(int dest, int temp) {
   this->queue_command(C_WHITE_TEMPERATURE, {static_cast<char>(temp)}, dest);
   return true;
 }
+
+void MeshDevice::request_status_update(int dest) { this->queue_command(C_REQUEST_STATUS, {0x10}, dest); }
 
 bool MeshDevice::request_device_info(Device *device) {
   device->device_info_requested = esphome::millis();

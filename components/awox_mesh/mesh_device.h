@@ -248,6 +248,8 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   bool set_white_temperature(int dest, int temp);
 
+  void request_status_update(int dest);
+
   bool request_device_info(Device *device);
 
   bool request_device_version(int dest);
