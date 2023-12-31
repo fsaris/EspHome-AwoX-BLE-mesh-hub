@@ -50,6 +50,7 @@ static std::string TextToBinaryString(std::string words) {
 struct Device {
   int mesh_id;
   bool send_discovery = false;
+  bool requested_proof_of_life = false;
   uint32_t last_online = 0;
   uint32_t device_info_requested = 0;
   bool online;
