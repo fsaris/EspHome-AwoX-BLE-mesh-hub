@@ -2,7 +2,10 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <regex>
 #include "awox_mesh.h"
+#include "esphome/components/mqtt/mqtt_const.h"
+#include "esphome/components/mqtt/mqtt_component.h"
 
 #include "esphome/core/log.h"
 
@@ -49,6 +52,17 @@ void AwoxMesh::setup() {
   Component::setup();
 
   this->connection->set_disconnect_callback([this]() { ESP_LOGI(TAG, "disconnected"); });
+
+  // Use retained MQTT messages to publish a default offline status for all devices
+  global_mqtt_client->subscribe(
+      global_mqtt_client->get_topic_prefix() + "/#", [this](const std::string &topic, const std::string &payload) {
+        if (std::regex_match(topic, std::regex(global_mqtt_client->get_topic_prefix() + "/[0-9]+/availability"))) {
+          ESP_LOGD(TAG, "Received topic: %s, %s", topic.c_str(), payload.c_str());
+          if (payload == "online") {
+            global_mqtt_client->publish(topic.c_str(), "offline");
+          }
+        }
+      });
 }
 
 void AwoxMesh::loop() {
@@ -72,6 +86,9 @@ void AwoxMesh::loop() {
       this->connection->disconnect();
       this->connection->set_address(0);
     });
+
+    // Stop listening on all incomming topics (used in setup() to publish offline for each device)
+    global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#");
   }
 }
 
