@@ -12,7 +12,7 @@
 namespace esphome {
 namespace awox_mesh {
 
-static const char *const TAG = "AwoxMesh";
+static const char *const TAG = "awox.mesh";
 
 FoundDevice AwoxMesh::add_to_devices(const esp32_ble_tracker::ESPBTDevice &device) {
   this->devices_.erase(

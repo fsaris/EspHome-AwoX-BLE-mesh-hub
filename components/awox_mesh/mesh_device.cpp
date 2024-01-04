@@ -15,7 +15,7 @@
 namespace esphome {
 namespace awox_mesh {
 
-static const char *const TAG = "mesh_device";
+static const char *const TAG = "awox.device";
 
 /** \fn static std::string encrypt(std::string key, std::string data)
  *  \brief Encrypts a n x 16-byte data string with a 16-byte key, using AES encryption.
