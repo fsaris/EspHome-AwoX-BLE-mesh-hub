@@ -382,7 +382,8 @@ void MeshDevice::handle_packet(std::string &packet) {
     device->device_info = this->device_info_resolver->get_by_product_id(
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12])));
 
-    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: %02X mac: %s => %s", mesh_id, device->device_info->get_product_id(),
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: 0x%02X (%s - %s) mac: %s => %s", mesh_id,
+             device->device_info->get_product_id(), device->device_info->get_name(), device->device_info->get_model(),
              device->mac.c_str(), TextToBinaryString(packet).c_str());
 
     this->send_discovery(device);
