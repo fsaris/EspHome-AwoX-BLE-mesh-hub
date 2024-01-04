@@ -10,6 +10,7 @@
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #include "esphome/components/mqtt/mqtt_client.h"
 #include "device_info.h"
+#include "device.h"
 
 namespace esphome {
 namespace awox_mesh {
@@ -39,66 +40,25 @@ static std::string uuid_pair_char = "00010203-0405-0607-0809-0a0b0c0d1914";
 #define COMMAND_DEVICE_INFO_QUERY 0xEA
 #define COMMAND_DEVICE_INFO_REPORT 0xEB
 
-static std::string TextToBinaryString(std::string words) {
-  std::string binaryString = "";
-  for (char &_char : words) {
-    binaryString += std::bitset<8>(_char).to_string();
-  }
-  return binaryString;
-}
-
-struct Device {
-  int mesh_id;
-  bool send_discovery = false;
-  bool requested_proof_of_life = false;
-  uint32_t last_online = 0;
-  uint32_t device_info_requested = 0;
-  bool online;
-
-  std::string mac = "";
-
-  DeviceInfo *device_info;
-
-  bool state = false;
-  bool color_mode = false;
-  bool transition_mode = false;
-  unsigned char white_brightness;
-  unsigned char temperature;
-  unsigned char color_brightness;
-  unsigned char R;
-  unsigned char G;
-  unsigned char B;
-};
-
-struct PublishOnlineStatus {
-  Device *device;
-  bool online;
-  uint32_t time;
-};
-
 struct QueuedCommand {
   int command;
   std::string data;
   int dest;
 };
 
-class MeshDevice : public esp32_ble_client::BLEClientBase {
+class AwoxMesh;
+
+class MeshConnection : public esp32_ble_client::BLEClientBase {
   /**
    * Packet counter used to tag transmitted packets.
    */
   int packet_count = 1;
   uint32_t last_send_command = 0;
 
-  DeviceInfoResolver *device_info_resolver = new DeviceInfoResolver();
-
-  std::vector<Device *> devices_{};
-  std::deque<PublishOnlineStatus> delayed_availability_publish{};
   std::deque<QueuedCommand> command_queue{};
 
   std::function<void()> disconnect_callback;
 
-  std::string mesh_name = "";
-  std::string mesh_password = "";
   std::string random_key;
   std::string session_key;
 
@@ -124,24 +84,6 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   void handle_packet(std::string &packet);
 
-  Device *get_device(int dest);
-
-  std::string device_state_as_string(Device *device);
-
-  std::string get_discovery_topic_(const esphome::mqtt::MQTTDiscoveryInfo &discovery_info, Device *device) const;
-
-  std::string get_mqtt_topic_for_(Device *device, const std::string &suffix) const;
-
-  void send_discovery(Device *device);
-
-  void publish_state(Device *device);
-
-  void publish_availability(Device *device, bool delayed);
-
-  void publish_connected(bool connected);
-
-  void process_incomming_command(Device *device, JsonObject root);
-
   void queue_command(int command, const std::string &data, int dest = 0);
 
   virtual void set_state(esp32_ble_tracker::ClientState st) override {
@@ -149,87 +91,54 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
     switch (st) {
       case esp32_ble_tracker::ClientState::INIT:
 
-        ESP_LOGI("MeshDevice", "INIT");
+        ESP_LOGI("awox.connection", "INIT");
         break;
       case esp32_ble_tracker::ClientState::DISCONNECTING:
 
-        ESP_LOGI("MeshDevice", "DISCONNECTING");
+        ESP_LOGI("awox.connection", "DISCONNECTING");
         break;
       case esp32_ble_tracker::ClientState::IDLE:
 
-        ESP_LOGI("MeshDevice", "IDLE");
+        ESP_LOGI("awox.connection", "IDLE");
         break;
       case esp32_ble_tracker::ClientState::SEARCHING:
 
-        ESP_LOGI("MeshDevice", "SEARCHING");
+        ESP_LOGI("awox.connection", "SEARCHING");
         break;
       case esp32_ble_tracker::ClientState::DISCOVERED:
 
-        ESP_LOGI("MeshDevice", "DISCOVERED");
+        ESP_LOGI("awox.connection", "DISCOVERED");
         break;
       case esp32_ble_tracker::ClientState::READY_TO_CONNECT:
 
-        ESP_LOGI("MeshDevice", "READY_TO_CONNECT");
+        ESP_LOGI("awox.connection", "READY_TO_CONNECT");
         break;
       case esp32_ble_tracker::ClientState::CONNECTING:
 
-        ESP_LOGI("MeshDevice", "CONNECTING");
+        ESP_LOGI("awox.connection", "CONNECTING");
         break;
       case esp32_ble_tracker::ClientState::CONNECTED:
 
-        ESP_LOGI("MeshDevice", "CONNECTED");
+        ESP_LOGI("awox.connection", "CONNECTED");
         break;
       case esp32_ble_tracker::ClientState::ESTABLISHED:
 
-        ESP_LOGI("MeshDevice", "ESTABLISHED");
+        ESP_LOGI("awox.connection", "ESTABLISHED");
         break;
 
       default:
-        ESP_LOGI("MeshDevice", "Unknown state");
+        ESP_LOGI("awox.connection", "Unknown state");
         break;
     }
   }
 
  public:
-  void set_mesh_name(const std::string &mesh_name) {
-    ESP_LOGI("MeshDevice", "name: %s", mesh_name.c_str());
-    this->mesh_name = mesh_name;
-  }
-  void set_mesh_password(const std::string &mesh_password) {
-    ESP_LOGI("MeshDevice", "password: %s", mesh_password.c_str());
-    this->mesh_password = mesh_password;
-  }
-
-  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer,
-                       const char *icon) {
-    this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
-  }
-
   void loop() override;
 
   bool gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                            esp_ble_gattc_cb_param_t *param) override;
 
-  void set_address(uint64_t address) {
-    this->publish_connected(false);
-    this->set_state(esp32_ble_tracker::ClientState::IDLE);
-
-    BLEClientBase::set_address(address);
-
-    if (address == 0) {
-      this->reverse_address = "";
-    } else {
-      unsigned char buf[6];
-      buf[0] = (address >> 0) & 0xff;
-      buf[1] = (address >> 8) & 0xff;
-      buf[2] = (address >> 16) & 0xff;
-      buf[3] = (address >> 24) & 0xff;
-      buf[4] = (address >> 32) & 0xff;
-      buf[5] = (address >> 40) & 0xff;
-
-      this->reverse_address = std::string((char *) buf, 6);
-    }
-  };
+  void set_address(uint64_t address);
 
   void set_disconnect_callback(std::function<void()> &&f);
 
@@ -237,21 +146,28 @@ class MeshDevice : public esp32_ble_client::BLEClientBase {
 
   void request_status();
 
-  bool set_state(int dest, bool state);
+  void set_power(int dest, bool state);
 
-  bool set_color(int dest, int red, int green, int blue);
+  void set_color(int dest, int red, int green, int blue);
 
-  bool set_color_brightness(int dest, int brightness);
+  void set_color_brightness(int dest, int brightness);
 
-  bool set_white_brightness(int dest, int brightness);
+  void set_white_brightness(int dest, int brightness);
 
-  bool set_white_temperature(int dest, int temp);
+  void set_white_temperature(int dest, int temp);
 
   void request_status_update(int dest);
 
-  bool request_device_info(Device *device);
+  void request_device_info(Device *device);
 
   bool request_device_version(int dest);
+
+ protected:
+  friend class AwoxMesh;
+
+  std::string mesh_name = "";
+  std::string mesh_password = "";
+  AwoxMesh *mesh_;
 };
 
 }  // namespace awox_mesh
