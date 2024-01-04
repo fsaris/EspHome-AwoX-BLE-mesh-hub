@@ -1,6 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import esp32_ble_tracker, esp32_ble_client
+from esphome.components.esp32 import add_idf_sdkconfig_option
 
 from esphome.const import CONF_ID
 
@@ -97,3 +98,6 @@ async def to_code(config):
         await cg.register_component(connection_var, connection_conf)
         cg.add(var.register_connection(connection_var))
         await esp32_ble_tracker.register_client(connection_var, connection_conf)
+
+
+    add_idf_sdkconfig_option("CONFIG_BT_GATTC_CACHE_NVS_FLASH", True)
