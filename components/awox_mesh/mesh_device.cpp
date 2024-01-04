@@ -80,15 +80,6 @@ static int convert_value_to_available_range(int value, int min_from, int max_fro
   return std::max(new_value, min_to);
 }
 
-void MeshDevice::on_shutdown() {
-  // todo assure this message is published
-  for (int i = 0; i < this->devices_.size(); i++) {
-    this->devices_[i]->online = false;
-    this->publish_availability(this->devices_[i], false);
-  }
-  this->publish_connected(false);
-}
-
 void MeshDevice::loop() {
   esp32_ble_client::BLEClientBase::loop();
 
