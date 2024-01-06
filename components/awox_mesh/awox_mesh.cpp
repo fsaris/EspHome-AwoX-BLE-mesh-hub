@@ -65,9 +65,8 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
 void AwoxMesh::setup() {
   Component::setup();
 
-  this->connection->set_disconnect_callback([this]() { ESP_LOGI(TAG, "disconnected"); });
-
   // Use retained MQTT messages to publish a default offline status for all devices
+  // todo: move to mqtt class
   global_mqtt_client->subscribe(
       global_mqtt_client->get_topic_prefix() + "/#", [this](const std::string &topic, const std::string &payload) {
         if (std::regex_match(topic, std::regex(global_mqtt_client->get_topic_prefix() + "/[0-9]+/availability"))) {
@@ -79,30 +78,59 @@ void AwoxMesh::setup() {
       });
 }
 
+bool AwoxMesh::start_up_delay_done() { return esphome::millis() - this->start > 5000 && this->devices_.size() > 0; }
+
 void AwoxMesh::loop() {
-  if (esphome::millis() - this->start > 20000 && this->devices_.size() > 0 && this->connection->address_str() == "") {
-    ESP_LOGD(TAG, "Total devices: %d", this->devices_.size());
-    for (int i = 0; i < this->devices_.size(); i++) {
-      ESP_LOGD(TAG, "Available device %s => rssi: %d", this->devices_[i].address_str.c_str(), this->devices_[i].rssi);
-    }
-    auto device = this->devices_.front();
-
-    ESP_LOGI(TAG, "Try to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
-    this->connection->set_address(device.address);
-    this->connection->parse_device(device.device);
-
-    this->set_timeout("connecting", 20000, [this, device]() {
-      if (this->connection->connected()) {
-        return;
-      }
-      ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
-      this->remove_devices_that_are_not_available();
-      this->connection->disconnect();
-      this->connection->set_address(0);
-    });
+  if (!ready_to_connect && this->start_up_delay_done()) {
+    ready_to_connect = true;
 
     // Stop listening on all incomming topics (used in setup() to publish offline for each device)
+    // todo: move to mqtt class
     global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#");
+
+    return;
+  }
+
+  if (!ready_to_connect) {
+    return;
+  }
+
+  for (auto *connection : this->connections_) {
+    if (connection->get_address() == 0) {
+      ESP_LOGD(TAG, "Total devices: %d", this->devices_.size());
+      for (int i = 0; i < this->devices_.size(); i++) {
+        ESP_LOGD(TAG, "Available device %s => rssi: %d", this->devices_[i].address_str.c_str(), this->devices_[i].rssi);
+      }
+      auto device = this->devices_.front();
+
+      if (device.connected) {
+        ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d ALLREADY connected!!", device.address_str.c_str(),
+                 device.rssi);
+        break;
+      }
+
+      ESP_LOGI(TAG, "Try to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
+
+      device.connected = true;
+
+      connection->set_address(device.address);
+      connection->parse_device(device.device);
+
+      this->set_timeout("connecting", 20000, [this, device, connection]() {
+        if (connection->connected()) {
+          return;
+        }
+        ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
+        // device.connected = false;
+
+        this->remove_devices_that_are_not_available();
+        connection->disconnect();
+        connection->set_address(0);
+      });
+
+      // max 1 new connection per loop
+      break;
+    }
   }
 
   for (auto *device : this->mesh_devices_) {
@@ -161,7 +189,6 @@ Device *AwoxMesh::get_device(int mesh_id) {
   ESP_LOGI(TAG, "Added mesh_id: %d, Number of found mesh devices = %d", device->mesh_id, this->mesh_devices_.size());
 
   this->request_device_info(device);
-  // this->request_device_version(device->mesh_id);
 
   return device;
 }
@@ -183,7 +210,7 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
     ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
 
     // Force info update request
-    this->connection->request_status_update(device->mesh_id);
+    this->request_status_update(device->mesh_id);
 
     return;
   }
@@ -242,6 +269,8 @@ void AwoxMesh::send_discovery(Device *device) {
 
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   device->send_discovery = true;
+
+  // clear all old discovery messages (els when type change they will resuls in duplicates)
 
   global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
@@ -437,28 +466,55 @@ std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suf
   return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(device->mesh_id) + "/" + suffix;
 }
 
-void AwoxMesh::request_device_info(Device *device) {
-  device->device_info_requested = esphome::millis();
-  this->connection->request_device_info(device);
+void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &&callback) {
+  ESP_LOGD(TAG, "Call connection for %d", dest);
+  for (auto *connection : this->connections_) {
+    if (connection->get_address() > 0) {
+      ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
+      callback(connection);
+
+      // for now we stop on first
+      return;
+    }
+  }
+  ESP_LOGW(TAG, "No active connection for %d", dest);
 }
 
-void AwoxMesh::set_power(int dest, bool state) { this->connection->set_power(dest, state); }
+void AwoxMesh::request_device_info(Device *device) {
+  this->call_connection(device->mesh_id, [device](MeshConnection *connection) {
+    device->device_info_requested = esphome::millis();
+    connection->request_device_info(device);
+    // connection->request_device_version(device->mesh_id);
+  });
+}
+
+void AwoxMesh::set_power(int dest, bool state) {
+  this->call_connection(dest, [dest, state](MeshConnection *connection) { connection->set_power(dest, state); });
+}
 
 void AwoxMesh::set_color(int dest, int red, int green, int blue) {
-  this->connection->set_color(dest, red, green, blue);
+  this->call_connection(
+      dest, [dest, red, green, blue](MeshConnection *connection) { connection->set_color(dest, red, green, blue); });
 }
 
 void AwoxMesh::set_color_brightness(int dest, int brightness) {
-  this->connection->set_color_brightness(dest, brightness);
+  this->call_connection(
+      dest, [dest, brightness](MeshConnection *connection) { connection->set_color_brightness(dest, brightness); });
 }
 
 void AwoxMesh::set_white_brightness(int dest, int brightness) {
-  this->connection->set_white_brightness(dest, brightness);
+  this->call_connection(
+      dest, [dest, brightness](MeshConnection *connection) { connection->set_white_brightness(dest, brightness); });
 }
 
-void AwoxMesh::set_white_temperature(int dest, int temp) { this->connection->set_white_temperature(dest, temp); }
+void AwoxMesh::set_white_temperature(int dest, int temp) {
+  this->call_connection(dest,
+                        [dest, temp](MeshConnection *connection) { connection->set_white_temperature(dest, temp); });
+}
 
-void AwoxMesh::request_status_update(int dest) { this->connection->request_status_update(dest); }
+void AwoxMesh::request_status_update(int dest) {
+  this->call_connection(dest, [dest](MeshConnection *connection) { connection->request_status_update(dest); });
+}
 
 }  // namespace awox_mesh
 }  // namespace esphome

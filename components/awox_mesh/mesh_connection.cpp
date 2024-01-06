@@ -142,7 +142,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
       }
       if (param->read.handle == this->pair_char->handle) {
         if (param->read.value[0] == 0xd) {
-          ESP_LOGI(TAG, "Response OK, let go");
+          ESP_LOGI(TAG, "Response OK, let's go");
           this->generate_session_key(this->random_key,
                                      std::string((char *) param->read.value, param->read.value_len).substr(1, 9));
 
