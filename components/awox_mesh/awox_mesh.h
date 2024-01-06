@@ -51,9 +51,10 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   bool start_up_delay_done();
 
-  FoundDevice add_to_devices(const esp32_ble_tracker::ESPBTDevice &device);
+  FoundDevice *add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device);
+  FoundDevice *next_to_connect();
   void sort_devices();
-  void remove_devices_that_are_not_available();
+  void set_rssi_for_devices_that_are_not_available();
   void process_incomming_command(Device *device, JsonObject root);
 
   std::string get_mqtt_topic_for_(Device *device, const std::string &suffix) const;
@@ -87,7 +88,10 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
     connection->mesh_name = this->mesh_name;
     connection->mesh_password = this->mesh_password;
     connection->mesh_ = this;
-    // connection->set_disconnect_callback([this]() { ESP_LOGI("awox.mesh", "disconnected"); });
+    connection->set_disconnect_callback([this]() {
+      ESP_LOGI("awox.mesh", "disconnected");
+      this->publish_connected();
+    });
   }
 
   void set_address_prefix(const std::string &address_prefix) {
@@ -102,11 +106,11 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void publish_availability(Device *device, bool delayed);
   void send_discovery(Device *device);
   void publish_state(Device *device);
-  void publish_connected(bool connected);
+  void publish_connected();
 
  protected:
   std::vector<MeshConnection *> connections_{};
-  std::vector<FoundDevice> devices_{};
+  std::vector<FoundDevice *> found_devices_{};
   std::vector<Device *> mesh_devices_{};
 
   void request_device_info(Device *device);

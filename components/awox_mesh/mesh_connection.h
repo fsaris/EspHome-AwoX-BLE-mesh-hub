@@ -46,6 +46,7 @@ struct QueuedCommand {
   int dest;
 };
 
+struct FoundDevice;
 class AwoxMesh;
 
 class MeshConnection : public esp32_ble_client::BLEClientBase {
@@ -63,6 +64,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
   std::string session_key;
 
   std::string reverse_address;
+
+  FoundDevice *found_device;
 
   esp32_ble_client::BLECharacteristic *notification_char;
   esp32_ble_client::BLECharacteristic *command_char;
@@ -161,6 +164,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
   void request_device_info(Device *device);
 
   bool request_device_version(int dest);
+
+  void connect_to(FoundDevice *found_device);
 
  protected:
   friend class AwoxMesh;

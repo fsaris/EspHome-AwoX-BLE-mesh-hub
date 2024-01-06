@@ -53,8 +53,20 @@ static std::string get_device_mac(unsigned char part3, unsigned char part4, unsi
   return std::string((char *) value, 17);
 }
 
+void MeshConnection::connect_to(FoundDevice *found_device) {
+  this->set_address(found_device->address);
+  this->found_device = found_device;
+  this->found_device->connected = true;
+  this->parse_device(found_device->device);
+}
+
 void MeshConnection::set_address(uint64_t address) {
-  this->mesh_->publish_connected(false);
+  if (this->found_device) {
+    this->found_device->connected = false;
+  }
+  if (address == 0) {
+    this->disconnect_callback();
+  }
   this->set_state(esp32_ble_tracker::ClientState::IDLE);
 
   BLEClientBase::set_address(address);
@@ -209,7 +221,7 @@ void MeshConnection::setup_connection() {
   this->notification_char->write_value((uint8_t *) &notify_en, sizeof(notify_en));
 
   // todo; set connection state and trigger mesh to publish this
-  this->mesh_->publish_connected(true);
+  this->mesh_->publish_connected();
 }
 
 std::string MeshConnection::combine_name_and_password() const {
@@ -347,8 +359,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     device->product_id =
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
 
-    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: 0x%02X mac: %s => %s", mesh_id, device->product_id,
-             device->mac.c_str(), string_as_binary_string(packet).c_str());
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: 0x%02X mac: %s", mesh_id, device->product_id, device->mac.c_str());
 
     this->mesh_->send_discovery(device);
     return;

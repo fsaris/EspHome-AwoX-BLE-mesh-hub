@@ -28,25 +28,31 @@ static std::string get_product_code_as_hex_string(int product_id) {
   return std::string((char *) value, 15);
 }
 
-FoundDevice AwoxMesh::add_to_devices(const esp32_ble_tracker::ESPBTDevice &device) {
-  this->devices_.erase(
-      std::remove_if(this->devices_.begin(), this->devices_.end(),
-                     [device](const FoundDevice &_f) { return _f.address == device.address_uint64(); }),
-      this->devices_.end());
+FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
+  FoundDevice *found_device = new FoundDevice();
 
-  static FoundDevice found = {};
-  found.address_str = device.address_str();
-  found.address = device.address_uint64();
-  found.rssi = device.get_rssi();
-  found.last_detected = esphome::millis();
-  found.device = device;
-  this->devices_.push_back(found);
+  auto found = std::find_if(this->found_devices_.begin(), this->found_devices_.end(),
+                            [device](const FoundDevice *_f) { return _f->address == device.address_uint64(); });
 
-  this->remove_devices_that_are_not_available();
+  if (found != found_devices_.end()) {
+    found_device = found_devices_.at(found - found_devices_.begin());
+    ESP_LOGV(TAG, "Found existing device: %s", found_device->address_str.c_str());
+  } else {
+    ESP_LOGV(TAG, "Register device: %s", device.address_str().c_str());
+    found_device->address_str = device.address_str();
+    found_device->address = device.address_uint64();
+    this->found_devices_.push_back(found_device);
+  }
+
+  found_device->device = device;
+  found_device->rssi = device.get_rssi();
+  found_device->last_detected = esphome::millis();
+
+  this->set_rssi_for_devices_that_are_not_available();
 
   this->sort_devices();
 
-  return found;
+  return found_device;
 }
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -54,10 +60,10 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     return false;
   }
 
-  FoundDevice found = add_to_devices(device);
+  add_to_found_devices(device);
 
   ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
-           device.address_str().c_str(), device.get_rssi(), this->devices_.size());
+           device.address_str().c_str(), device.get_rssi(), this->found_devices_.size());
 
   return true;
 }
@@ -76,9 +82,12 @@ void AwoxMesh::setup() {
           }
         }
       });
+  this->publish_connected();
 }
 
-bool AwoxMesh::start_up_delay_done() { return esphome::millis() - this->start > 5000 && this->devices_.size() > 0; }
+bool AwoxMesh::start_up_delay_done() {
+  return esphome::millis() - this->start > 5000 && this->found_devices_.size() > 0;
+}
 
 void AwoxMesh::loop() {
   if (!ready_to_connect && this->start_up_delay_done()) {
@@ -97,33 +106,28 @@ void AwoxMesh::loop() {
 
   for (auto *connection : this->connections_) {
     if (connection->get_address() == 0) {
-      ESP_LOGD(TAG, "Total devices: %d", this->devices_.size());
-      for (int i = 0; i < this->devices_.size(); i++) {
-        ESP_LOGD(TAG, "Available device %s => rssi: %d", this->devices_[i].address_str.c_str(), this->devices_[i].rssi);
-      }
-      auto device = this->devices_.front();
+      auto *found_device = this->next_to_connect();
 
-      if (device.connected) {
-        ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d ALLREADY connected!!", device.address_str.c_str(),
-                 device.rssi);
+      if (found_device == nullptr) {
         break;
       }
 
-      ESP_LOGI(TAG, "Try to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
+      if (found_device->connected) {
+        ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d ALLREADY connected!!", found_device->address_str.c_str(),
+                 found_device->rssi);
+        break;
+      }
 
-      device.connected = true;
+      ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
 
-      connection->set_address(device.address);
-      connection->parse_device(device.device);
+      connection->connect_to(found_device);
 
-      this->set_timeout("connecting", 20000, [this, device, connection]() {
+      this->set_timeout("connecting", 20000, [this, found_device, connection]() {
         if (connection->connected()) {
           return;
         }
-        ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", device.address_str.c_str(), device.rssi);
-        // device.connected = false;
-
-        this->remove_devices_that_are_not_available();
+        ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+        this->set_rssi_for_devices_that_are_not_available();
         connection->disconnect();
         connection->set_address(0);
       });
@@ -158,15 +162,32 @@ void AwoxMesh::loop() {
 }
 
 void AwoxMesh::sort_devices() {
-  std::stable_sort(this->devices_.begin(), this->devices_.end(),
-                   [](FoundDevice a, FoundDevice b) { return a.rssi > b.rssi; });
+  std::stable_sort(this->found_devices_.begin(), this->found_devices_.end(),
+                   [](FoundDevice *a, FoundDevice *b) { return a->rssi > b->rssi; });
 }
 
-void AwoxMesh::remove_devices_that_are_not_available() {
+FoundDevice *AwoxMesh::next_to_connect() {
+  ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
+  for (auto *found_device : this->found_devices_) {
+    ESP_LOGD(TAG, "Available device %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+  }
+
+  for (auto *found_device : this->found_devices_) {
+    if (!found_device->connected && found_device->rssi > -9999) {
+      return found_device;
+    }
+  }
+
+  return nullptr;
+}
+
+void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   const uint32_t now = esphome::millis();
-  this->devices_.erase(std::remove_if(this->devices_.begin(), this->devices_.end(),
-                                      [&](const FoundDevice &_f) { return now - _f.last_detected > 20000; }),
-                       this->devices_.end());
+  for (auto *found_device : this->found_devices_) {
+    if (now - found_device->last_detected > 20000) {
+      found_device->rssi = -9999;
+    }
+  }
 }
 
 Device *AwoxMesh::get_device(int mesh_id) {
@@ -193,8 +214,15 @@ Device *AwoxMesh::get_device(int mesh_id) {
   return device;
 }
 
-void AwoxMesh::publish_connected(bool connected) {
-  // todo loop through all connections to check if connected..
+void AwoxMesh::publish_connected() {
+  bool connected = false;
+
+  for (auto *connection : this->connections_) {
+    if (connection->connected()) {
+      connected = true;
+    }
+  }
+
   const std::string message = connected ? "online" : "offline";
   ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
   global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
