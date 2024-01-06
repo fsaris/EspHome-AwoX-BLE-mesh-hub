@@ -40,6 +40,8 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   uint32_t start;
 
   bool ready_to_connect = false;
+  bool has_active_connection = false;
+  uint32_t last_connection_attempt = 0;
 
   std::string mesh_name = "";
   std::string mesh_password = "";

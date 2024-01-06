@@ -104,36 +104,41 @@ void AwoxMesh::loop() {
     return;
   }
 
-  for (auto *connection : this->connections_) {
-    if (connection->get_address() == 0) {
-      auto *found_device = this->next_to_connect();
+  if (!this->has_active_connection || esphome::millis() - this->last_connection_attempt < 20000) {
+    this->last_connection_attempt = esphome::millis();
 
-      if (found_device == nullptr) {
-        break;
-      }
+    for (auto *connection : this->connections_) {
+      if (connection->get_address() == 0) {
+        auto *found_device = this->next_to_connect();
 
-      if (found_device->connected) {
-        ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d ALLREADY connected!!", found_device->address_str.c_str(),
-                 found_device->rssi);
-        break;
-      }
-
-      ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
-
-      connection->connect_to(found_device);
-
-      this->set_timeout("connecting", 20000, [this, found_device, connection]() {
-        if (connection->connected()) {
-          return;
+        if (found_device == nullptr) {
+          ESP_LOGD(TAG, "No devices found to connect to");
+          break;
         }
-        ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
-        this->set_rssi_for_devices_that_are_not_available();
-        connection->disconnect();
-        connection->set_address(0);
-      });
 
-      // max 1 new connection per loop
-      break;
+        if (found_device->connected) {
+          ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!", found_device->address_str.c_str(),
+                   found_device->rssi);
+          break;
+        }
+
+        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+
+        connection->connect_to(found_device);
+
+        this->set_timeout("connecting", 20000, [this, found_device, connection]() {
+          if (connection->connected()) {
+            return;
+          }
+          ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+          this->set_rssi_for_devices_that_are_not_available();
+          connection->disconnect();
+          connection->set_address(0);
+        });
+
+        // max 1 new connection per loop()
+        break;
+      }
     }
   }
 
@@ -215,15 +220,15 @@ Device *AwoxMesh::get_device(int mesh_id) {
 }
 
 void AwoxMesh::publish_connected() {
-  bool connected = false;
+  this->has_active_connection = false;
 
   for (auto *connection : this->connections_) {
     if (connection->connected()) {
-      connected = true;
+      this->has_active_connection = true;
     }
   }
 
-  const std::string message = connected ? "online" : "offline";
+  const std::string message = this->has_active_connection ? "online" : "offline";
   ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
   global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
 }
@@ -298,7 +303,11 @@ void AwoxMesh::send_discovery(Device *device) {
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   device->send_discovery = true;
 
-  // clear all old discovery messages (els when type change they will resuls in duplicates)
+  // Clear all old discovery messages (else when type change they will resuls in duplicates)
+  global_mqtt_client->publish(discovery_info.prefix + "/light/awox-" + str_sanitize(device->mac) + "/config", "", 0, 0,
+                              true);
+  global_mqtt_client->publish(discovery_info.prefix + "/switch/awox-" + str_sanitize(device->mac) + "/config", "", 0, 0,
+                              true);
 
   global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
