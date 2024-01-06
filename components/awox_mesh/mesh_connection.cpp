@@ -298,8 +298,6 @@ void MeshConnection::handle_packet(std::string &packet) {
     mesh_id = (static_cast<unsigned char>(packet[19]) * 256) + static_cast<unsigned char>(packet[10]);
     mode = static_cast<unsigned char>(packet[12]);
 
-    Device *device = this->mesh_->get_device(mesh_id);
-
     online = packet[11] > 0;
     state = (mode & 1) == 1;
     color_mode = ((mode >> 1) & 1) == 1;
@@ -313,15 +311,6 @@ void MeshConnection::handle_packet(std::string &packet) {
     G = packet[17];
     B = packet[18];
 
-    if (device->requested_proof_of_life) {
-      ESP_LOGD(TAG,
-               "IGNORED online status report (waiting for proof of live): mesh: %d, on: %d, color_mode: %d, "
-               "transition_mode: %d, w_b: %d, temp: %d, "
-               "c_b: %d, rgb: %02X%02X%02X ",
-               mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
-      return;
-    }
-
     ESP_LOGD(TAG,
              "online status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
              "c_b: %d, rgb: %02X%02X%02X ",
@@ -330,9 +319,6 @@ void MeshConnection::handle_packet(std::string &packet) {
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
     mode = static_cast<unsigned char>(packet[10]);
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
-
-    Device *device = this->mesh_->get_device(mesh_id);
-    device->requested_proof_of_life = false;
 
     online = true;
     state = (mode & 1) == 1;

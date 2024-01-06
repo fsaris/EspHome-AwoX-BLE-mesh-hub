@@ -184,7 +184,7 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
 
     // Force info update request
     this->connection->request_status_update(device->mesh_id);
-    device->requested_proof_of_life = true;
+
     return;
   }
 
