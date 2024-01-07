@@ -84,10 +84,10 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   AwoxMesh() { this->start = esphome::millis(); }
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 
-  void on_scan_end() override { ESP_LOGD("AwoxMesh", "scan end"); }
+  void on_scan_end() override { ESP_LOGD("awox.mesh", "scan end"); }
 
   void register_connection(MeshConnection *connection) {
-    ESP_LOGD("AwoxMesh", "register_connection");
+    ESP_LOGD("awox.mesh", "register_connection");
     this->connections_.push_back(connection);
     connection->mesh_name = this->mesh_name;
     connection->mesh_password = this->mesh_password;
@@ -99,7 +99,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   }
 
   void set_address_prefix(const std::string &address_prefix) {
-    ESP_LOGI("AwoxMesh", "address_prefix: %s", address_prefix.c_str());
+    ESP_LOGI("awox.mesh", "address_prefix: %s", address_prefix.c_str());
     this->address_prefix = address_prefix;
   }
 
