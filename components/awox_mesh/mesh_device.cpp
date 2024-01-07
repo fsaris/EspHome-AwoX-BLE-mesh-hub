@@ -80,6 +80,14 @@ static int convert_value_to_available_range(int value, int min_from, int max_fro
   return std::max(new_value, min_to);
 }
 
+static std::string str_sanitize_macadres(const std::string &str) {
+  std::string out;
+  std::copy_if(str.begin(), str.end(), std::back_inserter(out), [](const char &c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  });
+  return out;
+}
+
 void MeshDevice::on_shutdown() {
   // todo assure this message is published
   for (int i = 0; i < this->devices_.size(); i++) {
@@ -451,7 +459,7 @@ std::string MeshDevice::device_state_as_string(Device *device) {
 
 std::string MeshDevice::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
   return discovery_info.prefix + "/" + device->device_info->get_component_type() + "/awox-" +
-         str_sanitize(device->mac) + "/config";
+         str_sanitize_macadres(device->mac) + "/config";
 }
 
 std::string MeshDevice::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
