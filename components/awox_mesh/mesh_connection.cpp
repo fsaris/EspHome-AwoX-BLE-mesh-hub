@@ -418,6 +418,7 @@ bool MeshConnection::mesh_id_linked(int mesh_id) {
 void MeshConnection::add_mesh_id(int mesh_id) {
   if (!this->mesh_id_linked(mesh_id)) {
     this->linked_mesh_ids_.push_back(mesh_id);
+    sort(this->linked_mesh_ids_.begin(), this->linked_mesh_ids_.end());
   }
 }
 

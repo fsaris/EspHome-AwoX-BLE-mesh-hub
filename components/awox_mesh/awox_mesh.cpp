@@ -190,9 +190,20 @@ void AwoxMesh::sort_devices() {
 }
 
 FoundDevice *AwoxMesh::next_to_connect() {
+  for (auto *found_device : this->found_devices_) {
+    if (found_device->mesh_id == 0) {
+      Device *device = this->get_device(found_device->address_str);
+      if (device != nullptr) {
+        ESP_LOGD(TAG, "Set mesh_id %d for device %s", device->mesh_id, found_device->address_str.c_str());
+        found_device->mesh_id = device->mesh_id;
+      }
+    }
+  }
+
   ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
   for (auto *found_device : this->found_devices_) {
-    ESP_LOGD(TAG, "Available device %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+    ESP_LOGD(TAG, "Available device %s [%d] => rssi: %d", found_device->address_str.c_str(), found_device->mesh_id,
+             found_device->rssi);
   }
 
   std::vector<int> linked_mesh_ids;
@@ -202,19 +213,24 @@ FoundDevice *AwoxMesh::next_to_connect() {
            std::back_inserter(linked_mesh_ids));
     }
   }
+  sort(linked_mesh_ids.begin(), linked_mesh_ids.end());
+  linked_mesh_ids.erase(unique(linked_mesh_ids.begin(), linked_mesh_ids.end()), linked_mesh_ids.end());
 
-  ESP_LOGD(TAG, "Currently %d mesh devices reachable through active connections (%d currently known mesh devices)",
-           linked_mesh_ids.size(), this->mesh_devices_.size());
+  int known_mesh_devices = 0;
+  int identified_mesh_devices = 0;
+  for (auto *mesh_device : this->mesh_devices_) {
+    known_mesh_devices++;
+    if (mesh_device->product_id) {
+      identified_mesh_devices++;
+    }
+  }
+
+  ESP_LOGD(
+      TAG,
+      "Currently %d mesh devices reachable through active connections (%d currently known and %d fully recognized)",
+      linked_mesh_ids.size(), known_mesh_devices, identified_mesh_devices);
 
   for (auto *found_device : this->found_devices_) {
-    if (found_device->mesh_id == 0) {
-      Device *device = this->get_device(found_device->address_str);
-      if (device != nullptr) {
-        ESP_LOGD(TAG, "Set mesh_id %d for device %s", device->mesh_id, found_device->address_str.c_str());
-        found_device->mesh_id = device->mesh_id;
-      }
-    }
-
     if (!found_device->connected && found_device->rssi >= this->minimum_rssi) {
       // unknown mesh_id then the device is definitly not in reach of our current connection
       if (found_device->mesh_id == 0) {
@@ -223,7 +239,7 @@ FoundDevice *AwoxMesh::next_to_connect() {
       }
       // No active connection for found device
       if (!id_in_vector(found_device->mesh_id, linked_mesh_ids)) {
-        ESP_LOGD(TAG, "Try to connecty to device %s[%d] no active connection found for this device",
+        ESP_LOGD(TAG, "Try to connecty to device %s [%d] no active connection found for this device",
                  found_device->address_str.c_str(), found_device->mesh_id);
         return found_device;
       }
