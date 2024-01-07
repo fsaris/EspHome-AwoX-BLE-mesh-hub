@@ -64,6 +64,7 @@ void MeshConnection::set_address(uint64_t address) {
   if (this->found_device) {
     this->found_device->connected = false;
   }
+  this->linked_mesh_ids_.clear();
   if (address == 0) {
     this->disconnect_callback();
   }
@@ -371,12 +372,19 @@ void MeshConnection::handle_packet(std::string &packet) {
     return;
   }
 
+  if (online) {
+    this->add_mesh_id(mesh_id);
+  } else {
+    this->remove_mesh_id(mesh_id);
+  }
+
   Device *device = this->mesh_->get_device(mesh_id);
   bool online_changed = false;
 
   if (device->online != online) {
     online_changed = true;
   }
+
   device->online = online;
   device->state = state;
   device->color_mode = color_mode;
@@ -398,6 +406,24 @@ void MeshConnection::handle_packet(std::string &packet) {
   if (online_changed) {
     this->mesh_->publish_availability(device, true);
   }
+}
+
+bool MeshConnection::mesh_id_linked(int mesh_id) {
+  std::vector<int>::iterator position =
+      std::find(this->linked_mesh_ids_.begin(), this->linked_mesh_ids_.end(), mesh_id);
+
+  return position != this->linked_mesh_ids_.end();
+}
+
+void MeshConnection::add_mesh_id(int mesh_id) {
+  if (!this->mesh_id_linked(mesh_id)) {
+    this->linked_mesh_ids_.push_back(mesh_id);
+  }
+}
+
+void MeshConnection::remove_mesh_id(int mesh_id) {
+  this->linked_mesh_ids_.erase(std::remove(this->linked_mesh_ids_.begin(), this->linked_mesh_ids_.end(), mesh_id),
+                               this->linked_mesh_ids_.end());
 }
 
 std::string MeshConnection::build_packet(int dest, int command, const std::string &data) {

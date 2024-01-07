@@ -89,6 +89,9 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void queue_command(int command, const std::string &data, int dest = 0);
 
+  void add_mesh_id(int mesh_id);
+  void remove_mesh_id(int mesh_id);
+
   virtual void set_state(esp32_ble_tracker::ClientState st) override {
     this->state_ = st;
     switch (st) {
@@ -167,8 +170,14 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void connect_to(FoundDevice *found_device);
 
+  bool mesh_id_linked(int mesh_id);
+
+  const std::vector<int> &get_linked_mesh_ids() const { return this->linked_mesh_ids_; }
+
  protected:
   friend class AwoxMesh;
+
+  std::vector<int> linked_mesh_ids_;
 
   std::string mesh_name = "";
   std::string mesh_password = "";

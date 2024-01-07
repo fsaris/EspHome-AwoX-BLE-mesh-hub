@@ -14,6 +14,7 @@ namespace esphome {
 namespace awox_mesh {
 
 static const char *const TAG = "awox.mesh";
+static const int RSSI_NOT_AVAILABLE = -9999;
 
 static int convert_value_to_available_range(int value, int min_from, int max_from, int min_to, int max_to) {
   float normalized = (float) (value - min_from) / (float) (max_from - min_from);
@@ -34,6 +35,12 @@ static std::string str_sanitize_macadres(const std::string &str) {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
   });
   return out;
+}
+
+static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
+  std::vector<int>::const_iterator position = std::find(vector.begin(), vector.end(), mesh_id);
+
+  return position != vector.end();
 }
 
 FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -91,30 +98,32 @@ void AwoxMesh::setup() {
           }
         }
       });
-  this->publish_connected();
+  this->set_timeout("stop_listening_for_availability", 3000,
+                    []() { global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#"); });
+
+  this->set_interval("publish_connection", 5000, [this]() { this->publish_connected(); });
 }
 
 bool AwoxMesh::start_up_delay_done() {
-  return esphome::millis() - this->start > 5000 && this->found_devices_.size() > 0;
+  return esphome::millis() - this->start > 10000 && this->found_devices_.size() > 0;
 }
 
 void AwoxMesh::loop() {
   if (!ready_to_connect && this->start_up_delay_done()) {
     ready_to_connect = true;
-
-    // Stop listening on all incomming topics (used in setup() to publish offline for each device)
-    // todo: move to mqtt class
-    global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#");
-
-    return;
   }
 
   if (!ready_to_connect) {
     return;
   }
 
-  if (!this->has_active_connection || esphome::millis() - this->last_connection_attempt < 20000) {
-    this->last_connection_attempt = esphome::millis();
+  const uint32_t now = esphome::millis();
+  const uint32_t since_last_attempt = now - this->last_connection_attempt;
+
+  // todo: disconnect when 2 connections have overlapping mesh_ids in get_linked_mesh_ids
+
+  if ((!this->has_active_connection && since_last_attempt > 5000) || since_last_attempt > 20000) {
+    this->last_connection_attempt = now;
 
     for (auto *connection : this->connections_) {
       if (connection->get_address() == 0) {
@@ -186,9 +195,38 @@ FoundDevice *AwoxMesh::next_to_connect() {
     ESP_LOGD(TAG, "Available device %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
   }
 
+  std::vector<int> linked_mesh_ids;
+  for (auto *connection : this->connections_) {
+    if (connection->connected()) {
+      copy(connection->get_linked_mesh_ids().begin(), connection->get_linked_mesh_ids().end(),
+           std::back_inserter(linked_mesh_ids));
+    }
+  }
+
+  ESP_LOGD(TAG, "Currently %d mesh devices reachable through active connections (%d currently known mesh devices)",
+           linked_mesh_ids.size(), this->mesh_devices_.size());
+
   for (auto *found_device : this->found_devices_) {
-    if (!found_device->connected && found_device->rssi > -9999) {
-      return found_device;
+    if (found_device->mesh_id == 0) {
+      Device *device = this->get_device(found_device->address_str);
+      if (device != nullptr) {
+        ESP_LOGD(TAG, "Set mesh_id %d for device %s", device->mesh_id, found_device->address_str.c_str());
+        found_device->mesh_id = device->mesh_id;
+      }
+    }
+
+    if (!found_device->connected && found_device->rssi >= this->minimum_rssi) {
+      // unknown mesh_id then the device is definitly not in reach of our current connection
+      if (found_device->mesh_id == 0) {
+        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->address_str.c_str());
+        return found_device;
+      }
+      // No active connection for found device
+      if (!id_in_vector(found_device->mesh_id, linked_mesh_ids)) {
+        ESP_LOGD(TAG, "Try to connecty to device %s[%d] no active connection found for this device",
+                 found_device->address_str.c_str(), found_device->mesh_id);
+        return found_device;
+      }
     }
   }
 
@@ -199,9 +237,22 @@ void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   const uint32_t now = esphome::millis();
   for (auto *found_device : this->found_devices_) {
     if (now - found_device->last_detected > 20000) {
-      found_device->rssi = -9999;
+      found_device->rssi = RSSI_NOT_AVAILABLE;
     }
   }
+}
+
+Device *AwoxMesh::get_device(const std::string &mac_address) {
+  ESP_LOGVV(TAG, "get device %s", mac_address.c_str());
+
+  auto found = std::find_if(this->mesh_devices_.begin(), this->mesh_devices_.end(),
+                            [mac_address](const Device *_f) { return _f->mac == mac_address; });
+
+  if (found != mesh_devices_.end()) {
+    return mesh_devices_.at(found - mesh_devices_.begin());
+  }
+
+  return nullptr;
 }
 
 Device *AwoxMesh::get_device(int mesh_id) {
@@ -230,16 +281,46 @@ Device *AwoxMesh::get_device(int mesh_id) {
 
 void AwoxMesh::publish_connected() {
   this->has_active_connection = false;
+  int active_connections = 0;
+  int online_devices = 0;
 
+  std::vector<int> linked_mesh_ids;
   for (auto *connection : this->connections_) {
     if (connection->connected()) {
+      active_connections++;
       this->has_active_connection = true;
+      copy(connection->get_linked_mesh_ids().begin(), connection->get_linked_mesh_ids().end(),
+           std::back_inserter(linked_mesh_ids));
     }
   }
+  sort(linked_mesh_ids.begin(), linked_mesh_ids.end());
+  linked_mesh_ids.erase(unique(linked_mesh_ids.begin(), linked_mesh_ids.end()), linked_mesh_ids.end());
+  online_devices = linked_mesh_ids.size();
 
   const std::string message = this->has_active_connection ? "online" : "offline";
   ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
   global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
+
+  global_mqtt_client->publish_json(
+      global_mqtt_client->get_topic_prefix() + "/connection_status",
+      [&](JsonObject root) {
+        root["now"] = esphome::millis();
+        root["active_connections"] = active_connections;
+        root["online_devices"] = online_devices;
+
+        for (int i = 0; i < this->connections_.size(); i++) {
+          JsonObject connection = root.createNestedObject("connection_" + std::to_string(i));
+          connection["connected"] = this->connections_[i]->connected();
+          connection["mac"] = this->connections_[i]->connected() ? this->connections_[i]->address_str() : "";
+          connection["devices"] = this->connections_[i]->get_linked_mesh_ids().size();
+
+          std::stringstream mesh_ids;
+          std::copy(this->connections_[i]->get_linked_mesh_ids().begin(),
+                    this->connections_[i]->get_linked_mesh_ids().end(), std::ostream_iterator<int>(mesh_ids, ", "));
+          connection["mesh_ids"] = mesh_ids.str();
+        }
+      },
+      0, false);
 }
 
 void AwoxMesh::publish_availability(Device *device, bool delayed) {
@@ -509,7 +590,8 @@ std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suf
 void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &&callback) {
   ESP_LOGD(TAG, "Call connection for %d", dest);
   for (auto *connection : this->connections_) {
-    if (connection->get_address() > 0) {
+    // todo: when supporting groups dest doesn't have to be a linked mesh_id
+    if (connection->get_address() > 0 && connection->mesh_id_linked(dest)) {
       ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
       callback(connection);
 

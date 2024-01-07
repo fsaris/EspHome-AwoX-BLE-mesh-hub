@@ -34,6 +34,7 @@ struct FoundDevice {
   uint32_t last_detected;
   esp32_ble_tracker::ESPBTDevice device;
   bool connected = false;
+  int mesh_id;
 };
 
 class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component {
@@ -43,6 +44,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   bool has_active_connection = false;
   uint32_t last_connection_attempt = 0;
 
+  int minimum_rssi = -90;
   std::string mesh_name = "";
   std::string mesh_password = "";
   std::string address_prefix = "A4:C1";
@@ -104,6 +106,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void loop() override;
 
   Device *get_device(int dest);
+  Device *get_device(const std::string &mac_address);
 
   void publish_availability(Device *device, bool delayed);
   void send_discovery(Device *device);
