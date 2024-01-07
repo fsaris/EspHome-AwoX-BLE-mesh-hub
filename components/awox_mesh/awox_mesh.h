@@ -103,6 +103,8 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
     this->address_prefix = address_prefix;
   }
 
+  void set_min_rssi(int min_rssi) { this->minimum_rssi = min_rssi; }
+
   void loop() override;
 
   Device *get_device(int dest);
