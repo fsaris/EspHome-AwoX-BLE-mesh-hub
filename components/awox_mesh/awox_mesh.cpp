@@ -28,6 +28,14 @@ static std::string get_product_code_as_hex_string(int product_id) {
   return std::string((char *) value, 15);
 }
 
+static std::string str_sanitize_macadres(const std::string &str) {
+  std::string out;
+  std::copy_if(str.begin(), str.end(), std::back_inserter(out), [](const char &c) {
+    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  });
+  return out;
+}
+
 FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
   FoundDevice *found_device;
 
@@ -304,12 +312,6 @@ void AwoxMesh::send_discovery(Device *device) {
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   device->send_discovery = true;
 
-  // Clear all old discovery messages (else when type change they will resuls in duplicates)
-  global_mqtt_client->publish(discovery_info.prefix + "/light/awox-" + str_sanitize(device->mac) + "/config", "", 0, 0,
-                              true);
-  global_mqtt_client->publish(discovery_info.prefix + "/switch/awox-" + str_sanitize(device->mac) + "/config", "", 0, 0,
-                              true);
-
   global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
       [this, device, discovery_info](JsonObject root) {
@@ -497,7 +499,7 @@ void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
 
 std::string AwoxMesh::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
   return discovery_info.prefix + "/" + device->device_info->get_component_type() + "/awox-" +
-         str_sanitize(device->mac) + "/config";
+         str_sanitize_macadres(device->mac) + "/config";
 }
 
 std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
