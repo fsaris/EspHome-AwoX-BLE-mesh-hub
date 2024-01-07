@@ -29,7 +29,7 @@ static std::string get_product_code_as_hex_string(int product_id) {
 }
 
 FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
-  FoundDevice *found_device = new FoundDevice();
+  FoundDevice *found_device;
 
   auto found = std::find_if(this->found_devices_.begin(), this->found_devices_.end(),
                             [device](const FoundDevice *_f) { return _f->address == device.address_uint64(); });
@@ -39,12 +39,13 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
     ESP_LOGV(TAG, "Found existing device: %s", found_device->address_str.c_str());
   } else {
     ESP_LOGV(TAG, "Register device: %s", device.address_str().c_str());
+    found_device = new FoundDevice();
     found_device->address_str = device.address_str();
     found_device->address = device.address_uint64();
+    found_device->device = device;
     this->found_devices_.push_back(found_device);
   }
 
-  found_device->device = device;
   found_device->rssi = device.get_rssi();
   found_device->last_detected = esphome::millis();
 
