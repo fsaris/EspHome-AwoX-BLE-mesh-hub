@@ -110,5 +110,3 @@ async def to_code(config):
         cg.add(var.register_connection(connection_var))
         await esp32_ble_tracker.register_client(connection_var, connection_conf)
 
-
-    add_idf_sdkconfig_option("CONFIG_BT_GATTC_CACHE_NVS_FLASH", True)
