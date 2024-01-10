@@ -47,14 +47,8 @@ static std::string encrypt(std::string key, std::string data) {
 
 static int get_product_code(unsigned char part1, unsigned char part2) { return int(part2); }
 
-static std::string get_device_mac(unsigned char part3, unsigned char part4, unsigned char part5, unsigned char part6) {
-  char value[18];
-  sprintf(value, "A4:C1:%02X:%02X:%02X:%02X", part3, part4, part5, part6);
-  return std::string((char *) value, 17);
-}
-
 void MeshConnection::connect_to(FoundDevice *found_device) {
-  this->set_address(found_device->address);
+  this->set_address(found_device->device.address_uint64());
   this->found_device = found_device;
   this->found_device->connected = true;
   this->parse_device(found_device->device);
@@ -355,12 +349,13 @@ void MeshConnection::handle_packet(std::string &packet) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
 
     Device *device = this->mesh_->get_device(mesh_id);
-    device->mac = get_device_mac(static_cast<unsigned char>(packet[16]), static_cast<unsigned char>(packet[15]),
-                                 static_cast<unsigned char>(packet[14]), static_cast<unsigned char>(packet[13]));
+    device->set_address(static_cast<unsigned char>(packet[16]), static_cast<unsigned char>(packet[15]),
+                        static_cast<unsigned char>(packet[14]), static_cast<unsigned char>(packet[13]));
     device->product_id =
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
 
-    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: 0x%02X mac: %s", mesh_id, device->product_id, device->mac.c_str());
+    ESP_LOGD(TAG, "MAC report, dev [%d]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
+             device->address_str().c_str());
 
     this->mesh_->send_discovery(device);
     return;

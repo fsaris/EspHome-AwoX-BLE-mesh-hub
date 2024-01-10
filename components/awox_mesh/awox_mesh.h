@@ -28,8 +28,6 @@ struct PublishOnlineStatus {
 };
 
 struct FoundDevice {
-  std::string address_str;
-  uint64_t address{0};
   int rssi{0};
   uint32_t last_detected;
   esp32_ble_tracker::ESPBTDevice device;
@@ -108,7 +106,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void loop() override;
 
   Device *get_device(int dest);
-  Device *get_device(const std::string &mac_address);
+  Device *get_device(const uint64_t address);
 
   void publish_availability(Device *device, bool delayed);
   void send_discovery(Device *device);

@@ -29,14 +29,6 @@ static std::string get_product_code_as_hex_string(int product_id) {
   return std::string((char *) value, 15);
 }
 
-static std::string str_sanitize_macadres(const std::string &str) {
-  std::string out;
-  std::copy_if(str.begin(), str.end(), std::back_inserter(out), [](const char &c) {
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-  });
-  return out;
-}
-
 static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
   std::vector<int>::const_iterator position = std::find(vector.begin(), vector.end(), mesh_id);
 
@@ -46,17 +38,16 @@ static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
 FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
   FoundDevice *found_device;
 
-  auto found = std::find_if(this->found_devices_.begin(), this->found_devices_.end(),
-                            [device](const FoundDevice *_f) { return _f->address == device.address_uint64(); });
+  auto found = std::find_if(this->found_devices_.begin(), this->found_devices_.end(), [device](const FoundDevice *_f) {
+    return _f->device.address_uint64() == device.address_uint64();
+  });
 
   if (found != found_devices_.end()) {
     found_device = found_devices_.at(found - found_devices_.begin());
-    ESP_LOGV(TAG, "Found existing device: %s", found_device->address_str.c_str());
+    ESP_LOGV(TAG, "Found existing device: %s", found_device->device.address_str().c_str());
   } else {
     ESP_LOGV(TAG, "Register device: %s", device.address_str().c_str());
     found_device = new FoundDevice();
-    found_device->address_str = device.address_str();
-    found_device->address = device.address_uint64();
     found_device->device = device;
     this->found_devices_.push_back(found_device);
   }
@@ -135,12 +126,12 @@ void AwoxMesh::loop() {
         }
 
         if (found_device->connected) {
-          ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!", found_device->address_str.c_str(),
-                   found_device->rssi);
+          ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!",
+                   found_device->device.address_str().c_str(), found_device->rssi);
           break;
         }
 
-        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str().c_str(), found_device->rssi);
 
         connection->connect_to(found_device);
 
@@ -148,7 +139,8 @@ void AwoxMesh::loop() {
           if (connection->connected()) {
             return;
           }
-          ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->address_str.c_str(), found_device->rssi);
+          ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->device.address_str().c_str(),
+                   found_device->rssi);
           this->set_rssi_for_devices_that_are_not_available();
           connection->disconnect();
           connection->set_address(0);
@@ -192,9 +184,9 @@ void AwoxMesh::sort_devices() {
 FoundDevice *AwoxMesh::next_to_connect() {
   for (auto *found_device : this->found_devices_) {
     if (found_device->mesh_id == 0) {
-      Device *device = this->get_device(found_device->address_str);
+      Device *device = this->get_device(found_device->device.address_uint64());
       if (device != nullptr) {
-        ESP_LOGD(TAG, "Set mesh_id %d for device %s", device->mesh_id, found_device->address_str.c_str());
+        ESP_LOGD(TAG, "Set mesh_id %d for device %s", device->mesh_id, found_device->device.address_str().c_str());
         found_device->mesh_id = device->mesh_id;
       }
     }
@@ -202,8 +194,8 @@ FoundDevice *AwoxMesh::next_to_connect() {
 
   ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
   for (auto *found_device : this->found_devices_) {
-    ESP_LOGD(TAG, "Available device %s [%d] => rssi: %d", found_device->address_str.c_str(), found_device->mesh_id,
-             found_device->rssi);
+    ESP_LOGD(TAG, "Available device %s [%d] => rssi: %d", found_device->device.address_str().c_str(),
+             found_device->mesh_id, found_device->rssi);
   }
 
   std::vector<int> linked_mesh_ids;
@@ -234,13 +226,13 @@ FoundDevice *AwoxMesh::next_to_connect() {
     if (!found_device->connected && found_device->rssi >= this->minimum_rssi) {
       // unknown mesh_id then the device is definitly not in reach of our current connection
       if (found_device->mesh_id == 0) {
-        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->address_str.c_str());
+        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->device.address_str().c_str());
         return found_device;
       }
       // No active connection for found device
       if (!id_in_vector(found_device->mesh_id, linked_mesh_ids)) {
         ESP_LOGD(TAG, "Try to connecty to device %s [%d] no active connection found for this device",
-                 found_device->address_str.c_str(), found_device->mesh_id);
+                 found_device->device.address_str().c_str(), found_device->mesh_id);
         return found_device;
       }
     }
@@ -258,11 +250,11 @@ void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   }
 }
 
-Device *AwoxMesh::get_device(const std::string &mac_address) {
-  ESP_LOGVV(TAG, "get device %s", mac_address.c_str());
+Device *AwoxMesh::get_device(const uint64_t address) {
+  ESP_LOGVV(TAG, "get device %d", address);
 
   auto found = std::find_if(this->mesh_devices_.begin(), this->mesh_devices_.end(),
-                            [mac_address](const Device *_f) { return _f->mac == mac_address; });
+                            [address](const Device *_f) { return _f->address_uint64() == address; });
 
   if (found != mesh_devices_.end()) {
     return mesh_devices_.at(found - mesh_devices_.begin());
@@ -360,7 +352,7 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
 }
 
 void AwoxMesh::publish_state(Device *device) {
-  if (device->mac == "") {
+  if (!device->address_set()) {
     ESP_LOGW(TAG, "'%s': Can not yet send publish state, mac address not known...",
              std::to_string(device->mesh_id).c_str());
     return;
@@ -394,7 +386,7 @@ void AwoxMesh::publish_state(Device *device) {
 }
 
 void AwoxMesh::send_discovery(Device *device) {
-  if (device->mac == "") {
+  if (!device->address_set()) {
     ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
              std::to_string(device->mesh_id).c_str());
     return;
@@ -404,7 +396,7 @@ void AwoxMesh::send_discovery(Device *device) {
 
   ESP_LOGD(TAG, "[%d]: Sending discovery productID: 0x%02X (%s - %s) mac: %s", device->mesh_id,
            device->device_info->get_product_id(), device->device_info->get_name(), device->device_info->get_model(),
-           device->mac.c_str());
+           device->address_str().c_str());
 
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   device->send_discovery = true;
@@ -416,7 +408,7 @@ void AwoxMesh::send_discovery(Device *device) {
 
         // Entity
         root[MQTT_NAME] = nullptr;
-        root[MQTT_UNIQUE_ID] = "awox-" + device->mac + "-" + device->device_info->get_component_type();
+        root[MQTT_UNIQUE_ID] = "awox-" + device->address_str() + "-" + device->device_info->get_component_type();
 
         if (strlen(device->device_info->get_icon()) > 0) {
           root[MQTT_ICON] = device->device_info->get_icon();
@@ -473,7 +465,7 @@ void AwoxMesh::send_discovery(Device *device) {
 
         JsonArray identifiers = device_info.createNestedArray(MQTT_DEVICE_IDENTIFIERS);
         identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
-        identifiers.add(device->mac);
+        identifiers.add(device->address_str());
 
         device_info[MQTT_DEVICE_NAME] = device->device_info->get_name();
 
@@ -596,7 +588,7 @@ void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
 
 std::string AwoxMesh::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
   return discovery_info.prefix + "/" + device->device_info->get_component_type() + "/awox-" +
-         str_sanitize_macadres(device->mac) + "/config";
+         device->address_str_hex_only() + "/config";
 }
 
 std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
