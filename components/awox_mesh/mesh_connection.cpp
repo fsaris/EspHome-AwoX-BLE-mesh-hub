@@ -53,6 +53,9 @@ void MeshConnection::connect_to(FoundDevice *found_device) {
   this->found_device = found_device;
   this->found_device->connected = true;
   this->parse_device(found_device->device);
+  if (this->found_device->mesh_id) {
+    this->add_mesh_id(this->found_device->mesh_id);
+  }
 }
 
 void MeshConnection::set_address(uint64_t address) {
