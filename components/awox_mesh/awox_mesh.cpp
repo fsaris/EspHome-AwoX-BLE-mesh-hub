@@ -35,6 +35,30 @@ static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
   return position != vector.end();
 }
 
+static bool matching_mesh_ids(const std::vector<int> &vector1, const std::vector<int> &vector2) {
+  std::vector<int> result;
+
+  std::set_intersection(vector1.begin(), vector1.end(), vector2.begin(), vector2.end(), back_inserter(result));
+
+  return result.size() > 0;
+}
+
+void AwoxMesh::register_connection(MeshConnection *connection) {
+  ESP_LOGD(TAG, "register_connection");
+
+  this->connections_.push_back(connection);
+
+  connection->mesh_name = this->mesh_name;
+  connection->mesh_password = this->mesh_password;
+  connection->mesh_ = this;
+
+  connection->set_disconnect_callback([this]() {
+    ESP_LOGI(TAG, "disconnected");
+
+    this->publish_connected();
+  });
+}
+
 FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device) {
   FoundDevice *found_device;
 
@@ -116,6 +140,8 @@ void AwoxMesh::loop() {
   if ((!this->has_active_connection && since_last_attempt > 5000) || since_last_attempt > 20000) {
     this->last_connection_attempt = now;
 
+    this->disconnect_connections_with_overlapping_mesh_ids();
+
     for (auto *connection : this->connections_) {
       if (connection->get_address() == 0) {
         auto *found_device = this->next_to_connect();
@@ -173,6 +199,38 @@ void AwoxMesh::loop() {
       ESP_LOGD(TAG, "Skipped publishing availability for %d - %s (is currently %s)", publish.device->mesh_id,
                publish.online ? "Online" : "Offline", publish.device->online ? "Online" : "Offline");
     }
+  }
+}
+
+void AwoxMesh::disconnect_connections_with_overlapping_mesh_ids() {
+  const int connections_count = this->connections_.size();
+  for (int i = 0; i < connections_count; i++) {
+    if (this->connections_[i]->get_address() == 0) {
+      continue;
+    }
+    if (i - 1 >= 0 && this->connections_[i - 1]->connected()) {
+      this->disconnect_connection_with_overlapping_mesh_ids(i - 1, i);
+    }
+    if (i + 1 < connections_count && this->connections_[i + 1]->connected()) {
+      this->disconnect_connection_with_overlapping_mesh_ids(i + 1, i);
+    }
+  }
+}
+
+void AwoxMesh::disconnect_connection_with_overlapping_mesh_ids(const int a, const int b) {
+  if (!matching_mesh_ids(this->connections_[a]->get_linked_mesh_ids(), this->connections_[b]->get_linked_mesh_ids())) {
+    return;
+  }
+  if (this->connections_[a]->get_linked_mesh_ids().size() > this->connections_[b]->get_linked_mesh_ids().size()) {
+    ESP_LOGI(TAG, "Disconnect connection %d [%s] due to overlapping mesh_id's with other connection", b,
+             this->connections_[b]->address_str().c_str());
+    this->connections_[b]->clear_linked_mesh_ids();
+    this->connections_[b]->disconnect();
+  } else {
+    ESP_LOGI(TAG, "Disconnect connection %d [%s] due to overlapping mesh_id's with other connection", a,
+             this->connections_[a]->address_str().c_str());
+    this->connections_[a]->clear_linked_mesh_ids();
+    this->connections_[a]->disconnect();
   }
 }
 

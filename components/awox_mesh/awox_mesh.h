@@ -64,6 +64,9 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   void call_connection(int dest, std::function<void(MeshConnection *)> &&callback);
 
+  void disconnect_connections_with_overlapping_mesh_ids();
+  void disconnect_connection_with_overlapping_mesh_ids(int a, int b);
+
  public:
   void set_mesh_name(const std::string &mesh_name) {
     ESP_LOGI("awox.mesh", "name: %s", mesh_name.c_str());
@@ -84,17 +87,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   void on_scan_end() override { ESP_LOGD("awox.mesh", "scan end"); }
 
-  void register_connection(MeshConnection *connection) {
-    ESP_LOGD("awox.mesh", "register_connection");
-    this->connections_.push_back(connection);
-    connection->mesh_name = this->mesh_name;
-    connection->mesh_password = this->mesh_password;
-    connection->mesh_ = this;
-    connection->set_disconnect_callback([this]() {
-      ESP_LOGI("awox.mesh", "disconnected");
-      this->publish_connected();
-    });
-  }
+  void register_connection(MeshConnection *connection);
 
   void set_address_prefix(const std::string &address_prefix) {
     ESP_LOGI("awox.mesh", "address_prefix: %s", address_prefix.c_str());
