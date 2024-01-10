@@ -49,6 +49,7 @@ static int get_product_code(unsigned char part1, unsigned char part2) { return i
 
 void MeshConnection::connect_to(FoundDevice *found_device) {
   this->set_address(found_device->device.address_uint64());
+  this->set_state(esp32_ble_tracker::ClientState::IDLE);
   this->found_device = found_device;
   this->found_device->connected = true;
   this->parse_device(found_device->device);
@@ -58,11 +59,19 @@ void MeshConnection::set_address(uint64_t address) {
   if (this->found_device) {
     this->found_device->connected = false;
   }
-  this->linked_mesh_ids_.clear();
+
   if (address == 0) {
     this->disconnect_callback();
+
+    // Mark each linked mesh device as offline
+    for (int mesh_id : this->linked_mesh_ids_) {
+      Device *device = this->mesh_->get_device(mesh_id);
+      device->online = false;
+      this->mesh_->publish_availability(device, true);
+    }
   }
-  this->set_state(esp32_ble_tracker::ClientState::IDLE);
+
+  this->clear_linked_mesh_ids();
 
   BLEClientBase::set_address(address);
 
@@ -421,6 +430,8 @@ void MeshConnection::remove_mesh_id(int mesh_id) {
   this->linked_mesh_ids_.erase(std::remove(this->linked_mesh_ids_.begin(), this->linked_mesh_ids_.end(), mesh_id),
                                this->linked_mesh_ids_.end());
 }
+
+void MeshConnection::clear_linked_mesh_ids() { this->linked_mesh_ids_.clear(); }
 
 std::string MeshConnection::build_packet(int dest, int command, const std::string &data) {
   /* Telink mesh packets take the following form:

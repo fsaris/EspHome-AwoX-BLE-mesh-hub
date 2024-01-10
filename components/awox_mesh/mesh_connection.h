@@ -91,6 +91,7 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void add_mesh_id(int mesh_id);
   void remove_mesh_id(int mesh_id);
+  void clear_linked_mesh_ids();
 
   virtual void set_state(esp32_ble_tracker::ClientState st) override {
     this->state_ = st;
