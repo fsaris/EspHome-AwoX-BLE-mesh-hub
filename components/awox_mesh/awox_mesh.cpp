@@ -135,8 +135,6 @@ void AwoxMesh::loop() {
   const uint32_t now = esphome::millis();
   const uint32_t since_last_attempt = now - this->last_connection_attempt;
 
-  // todo: disconnect when 2 connections have overlapping mesh_ids in get_linked_mesh_ids
-
   if ((!this->has_active_connection && since_last_attempt > 5000) || since_last_attempt > 20000) {
     this->last_connection_attempt = now;
 
