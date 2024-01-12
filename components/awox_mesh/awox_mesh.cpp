@@ -663,7 +663,11 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
       return;
     }
   }
-  ESP_LOGW(TAG, "No active connection for %d", dest);
+
+  ESP_LOGD(TAG, "No active connection for %d, we trigger message on all", dest);
+  for (auto *connection : this->connections_) {
+    callback(connection);
+  }
 }
 
 void AwoxMesh::request_device_info(Device *device) {
