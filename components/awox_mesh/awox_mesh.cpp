@@ -666,9 +666,11 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
     }
   }
 
-  ESP_LOGD(TAG, "No active connection for %d, we trigger message on all", dest);
+  ESP_LOGI(TAG, "No active connection for %d, we trigger message on all", dest);
   for (auto *connection : this->connections_) {
-    callback(connection);
+    if (connection->connected()) {
+      callback(connection);
+    }
   }
 }
 
