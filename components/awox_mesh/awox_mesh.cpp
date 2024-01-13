@@ -444,7 +444,7 @@ void AwoxMesh::publish_state(Device *device) {
         0, true);
   } else {
     global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "state"), device->state ? "ON" : "OFF",
-                                device->state ? 2 : 3);
+                                device->state ? 2 : 3, 0, true);
   }
 }
 
