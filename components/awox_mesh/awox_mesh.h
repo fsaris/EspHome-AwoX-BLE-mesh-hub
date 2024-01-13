@@ -80,6 +80,8 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
                        const char *icon) {
     this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
   }
+
+  float get_setup_priority() const override;
   void setup() override;
 
   AwoxMesh() { this->start = esphome::millis(); }

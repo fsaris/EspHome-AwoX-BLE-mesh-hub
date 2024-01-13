@@ -43,6 +43,8 @@ static bool matching_mesh_ids(const std::vector<int> &vector1, const std::vector
   return result.size() > 0;
 }
 
+float AwoxMesh::get_setup_priority() const { return setup_priority::AFTER_CONNECTION; }
+
 void AwoxMesh::register_connection(MeshConnection *connection) {
   ESP_LOGD(TAG, "register_connection");
 
