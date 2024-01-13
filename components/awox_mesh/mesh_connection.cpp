@@ -415,6 +415,14 @@ void MeshConnection::handle_packet(std::string &packet) {
   }
 }
 
+int MeshConnection::mesh_id() {
+  if (this->found_device != nullptr) {
+    return this->found_device->mesh_id;
+  }
+
+  return 0;
+}
+
 bool MeshConnection::mesh_id_linked(int mesh_id) {
   std::vector<int>::iterator position =
       std::find(this->linked_mesh_ids_.begin(), this->linked_mesh_ids_.end(), mesh_id);

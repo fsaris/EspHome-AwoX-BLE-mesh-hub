@@ -59,6 +59,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void set_rssi_for_devices_that_are_not_available();
   void process_incomming_command(Device *device, JsonObject root);
 
+  void publish_connection_sensor_discovery();
   std::string get_mqtt_topic_for_(Device *device, const std::string &suffix) const;
   std::string get_discovery_topic_(const esphome::mqtt::MQTTDiscoveryInfo &discovery_info, Device *device) const;
 

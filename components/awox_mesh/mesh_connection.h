@@ -171,6 +171,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void connect_to(FoundDevice *found_device);
 
+  int mesh_id();
+
   bool mesh_id_linked(int mesh_id);
 
   const std::vector<int> &get_linked_mesh_ids() const { return this->linked_mesh_ids_; }

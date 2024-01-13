@@ -8,6 +8,7 @@
 #include "esphome/components/mqtt/mqtt_const.h"
 #include "esphome/components/mqtt/mqtt_component.h"
 
+#include "esphome/core/application.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
@@ -119,6 +120,8 @@ void AwoxMesh::setup() {
                     []() { global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#"); });
 
   this->set_interval("publish_connection", 5000, [this]() { this->publish_connected(); });
+
+  this->publish_connection_sensor_discovery();
 }
 
 bool AwoxMesh::start_up_delay_done() {
@@ -378,12 +381,14 @@ void AwoxMesh::publish_connected() {
           JsonObject connection = root.createNestedObject("connection_" + std::to_string(i));
           connection["connected"] = this->connections_[i]->connected();
           connection["mac"] = this->connections_[i]->connected() ? this->connections_[i]->address_str() : "";
+          connection["mesh_id"] =
+              this->connections_[i]->connected() ? std::to_string(this->connections_[i]->mesh_id()) : "";
           connection["devices"] = this->connections_[i]->get_linked_mesh_ids().size();
 
           std::stringstream mesh_ids;
           std::copy(this->connections_[i]->get_linked_mesh_ids().begin(),
                     this->connections_[i]->get_linked_mesh_ids().end(), std::ostream_iterator<int>(mesh_ids, ", "));
-          connection["mesh_ids"] = mesh_ids.str();
+          connection["mesh_ids"] = mesh_ids.str().substr(0, mesh_ids.str().size() - 2);
         }
       },
       0, false);
@@ -440,6 +445,126 @@ void AwoxMesh::publish_state(Device *device) {
   } else {
     global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "state"), device->state ? "ON" : "OFF",
                                 device->state ? 2 : 3);
+  }
+}
+
+void AwoxMesh::publish_connection_sensor_discovery() {
+  const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
+  const std::string sanitized_name = str_sanitize(App.get_name());
+
+  for (int i = 0; i < this->connections_.size(); i++) {
+    global_mqtt_client->publish_json(
+        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-devices/config",
+        [this, i, discovery_info](JsonObject root) {
+          // Entity
+          root[MQTT_NAME] = "Connection " + std::to_string(i) + " devices";
+          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-devices";
+          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
+          root[MQTT_ICON] = "mdi:counter";
+          root[MQTT_ENABLED_BY_DEFAULT] = false;
+
+          // State and command topic
+          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
+
+          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".devices }}";
+
+          // Device
+          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
+          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+        },
+        0, discovery_info.retain);
+
+    global_mqtt_client->publish_json(
+        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mesh-ids/config",
+        [this, i, discovery_info](JsonObject root) {
+          // Entity
+          root[MQTT_NAME] = "Connection " + std::to_string(i) + " Mesh ID's";
+          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mesh-ids";
+          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
+          root[MQTT_ICON] = "mdi:vector-polyline";
+          root[MQTT_ENABLED_BY_DEFAULT] = false;
+
+          // State and command topic
+          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
+
+          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mesh_ids }}";
+
+          // Device
+          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
+          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+        },
+        0, discovery_info.retain);
+
+    global_mqtt_client->publish_json(
+        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mesh-id/config",
+        [this, i, discovery_info](JsonObject root) {
+          // Entity
+          root[MQTT_NAME] = "Connection " + std::to_string(i) + " Mesh ID";
+          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mesh-id";
+          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
+          root[MQTT_ICON] = "mdi:vector-point-select";
+          root[MQTT_ENABLED_BY_DEFAULT] = false;
+
+          // State and command topic
+          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
+
+          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mesh_id }}";
+
+          // Device
+          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
+          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+        },
+        0, discovery_info.retain);
+
+    global_mqtt_client->publish_json(
+        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mac/config",
+        [this, i, discovery_info](JsonObject root) {
+          // Entity
+          root[MQTT_NAME] = "Connection " + std::to_string(i) + " mac address";
+          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mac";
+          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
+          root[MQTT_ICON] = "mdi:information";
+          root[MQTT_ENABLED_BY_DEFAULT] = false;
+
+          // State and command topic
+          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
+
+          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mac }}";
+
+          // Device
+          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
+          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+        },
+        0, discovery_info.retain);
+
+    global_mqtt_client->publish_json(
+        discovery_info.prefix + "/binary_sensor/" + sanitized_name + "/connection-" + std::to_string(i) +
+            "-connected/config",
+        [this, i, discovery_info](JsonObject root) {
+          // Entity
+          root[MQTT_NAME] = "Connection " + std::to_string(i) + " connected";
+          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-connected";
+          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
+          root[MQTT_ICON] = "mdi:connection";
+
+          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+
+          // State and command topic
+          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
+
+          root[MQTT_PAYLOAD_ON] = true;
+          root[MQTT_PAYLOAD_OFF] = false;
+          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".connected }}";
+
+          // Device
+          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
+          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+        },
+        0, discovery_info.retain);
   }
 }
 
