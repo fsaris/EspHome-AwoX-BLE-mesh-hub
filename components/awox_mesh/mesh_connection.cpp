@@ -69,8 +69,10 @@ void MeshConnection::set_address(uint64_t address) {
     // Mark each linked mesh device as offline
     for (int mesh_id : this->linked_mesh_ids_) {
       Device *device = this->mesh_->get_device(mesh_id);
-      device->online = false;
-      this->mesh_->publish_availability(device, true);
+      if (device != nullptr) {
+        device->online = false;
+        this->mesh_->publish_availability(device, true);
+      }
     }
   }
 
@@ -361,6 +363,11 @@ void MeshConnection::handle_packet(std::string &packet) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
 
     Device *device = this->mesh_->get_device(mesh_id);
+    if (device == nullptr) {
+      ESP_LOGD(TAG, "MAC report, dev [%d] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
+      return;
+    }
+
     device->set_address(static_cast<unsigned char>(packet[16]), static_cast<unsigned char>(packet[15]),
                         static_cast<unsigned char>(packet[14]), static_cast<unsigned char>(packet[13]));
     device->product_id =
@@ -379,13 +386,18 @@ void MeshConnection::handle_packet(std::string &packet) {
     return;
   }
 
+  Device *device = this->mesh_->get_device(mesh_id);
+  if (device == nullptr) {
+    ESP_LOGD(TAG, "Report, dev [%d] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
+    return;
+  }
+
   if (online) {
     this->add_mesh_id(mesh_id);
   } else {
     this->remove_mesh_id(mesh_id);
   }
 
-  Device *device = this->mesh_->get_device(mesh_id);
   bool online_changed = false;
 
   if (device->online != online) {

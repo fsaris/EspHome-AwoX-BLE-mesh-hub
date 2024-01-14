@@ -68,6 +68,9 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void disconnect_connections_with_overlapping_mesh_ids();
   void disconnect_connection_with_overlapping_mesh_ids(int a, int b);
 
+  bool mesh_id_allowed(int mesh_id);
+  bool mac_addresses_allowed(const uint64_t address);
+
  public:
   void set_mesh_name(const std::string &mesh_name) {
     ESP_LOGI("awox.mesh", "name: %s", mesh_name.c_str());
@@ -81,6 +84,10 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
                        const char *icon) {
     this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
   }
+
+  void add_allowed_mesh_id(const int mesh_id) { this->allowed_mesh_ids_.push_back(mesh_id); }
+
+  void add_allowed_mac_address(const uint64_t mac_address) { this->allowed_mac_addresses_.push_back(mac_address); }
 
   float get_setup_priority() const override;
   void setup() override;
@@ -113,6 +120,8 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   std::vector<MeshConnection *> connections_{};
   std::vector<FoundDevice *> found_devices_{};
   std::vector<Device *> mesh_devices_{};
+  std::vector<int> allowed_mesh_ids_{};
+  std::vector<uint64_t> allowed_mac_addresses_{};
 
   void request_device_info(Device *device);
   void set_power(int dest, bool state);

@@ -26,7 +26,8 @@ CONF_MIN_RSSI = "min_rssi"
 CONF_CONNECTIONS = "connections"
 CONF_MAX_CONNECTIONS = "max_connections"
 CONF_DEVICE_INFO = "device_info"
-
+CONF_ALLOWED_MESH_IDS = "allowed_mesh_ids"
+CONF_ALLOWED_ADDRESSES = "allowed_mac_addresses"
 MAX_CONNECTIONS = 3
 
 DEVICE_TYPES = {
@@ -57,6 +58,8 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ADDRESS_PREFIX): cv.string_strict,
             cv.Optional(CONF_MAX_CONNECTIONS, default=2): cv.int_range(min=1, max=MAX_CONNECTIONS),
             cv.Optional(CONF_MIN_RSSI): cv.int_range(min=-100, max=-10),
+            cv.Optional(CONF_ALLOWED_MESH_IDS, default=[]): cv.ensure_list(cv.int_),
+            cv.Optional(CONF_ALLOWED_ADDRESSES, default=[]): cv.ensure_list(cv.mac_address),
             cv.Optional(CONF_DEVICE_INFO, default=[]): cv.ensure_list(
                 cv.Schema(
                     {
@@ -97,6 +100,13 @@ async def to_code(config):
                 device["icon"],
             )
         )
+
+    for mesh_id in config.get(CONF_ALLOWED_MESH_IDS, []):
+        cg.add(var.add_allowed_mesh_id(mesh_id))
+
+    for mac_address in config.get(CONF_ALLOWED_ADDRESSES, []):
+        cg.add(var.add_allowed_mac_address(mac_address.as_hex))
+
 
     if config.get(CONF_ADDRESS_PREFIX):
         cg.add(var.set_address_prefix(config[CONF_ADDRESS_PREFIX]))

@@ -94,6 +94,10 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     return false;
   }
 
+  if (!this->mac_addresses_allowed(device.address_uint64())) {
+    return false;
+  }
+
   add_to_found_devices(device);
 
   ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
@@ -311,6 +315,28 @@ void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   }
 }
 
+bool AwoxMesh::mac_addresses_allowed(const uint64_t address) {
+  if (this->allowed_mac_addresses_.size() == 0) {
+    return true;
+  }
+
+  std::vector<uint64_t>::iterator position =
+      std::find(this->allowed_mac_addresses_.begin(), this->allowed_mac_addresses_.end(), address);
+
+  return position != this->allowed_mac_addresses_.end();
+}
+
+bool AwoxMesh::mesh_id_allowed(int mesh_id) {
+  if (this->allowed_mesh_ids_.size() == 0) {
+    return true;
+  }
+
+  std::vector<int>::iterator position =
+      std::find(this->allowed_mesh_ids_.begin(), this->allowed_mesh_ids_.end(), mesh_id);
+
+  return position != this->allowed_mesh_ids_.end();
+}
+
 Device *AwoxMesh::get_device(const uint64_t address) {
   ESP_LOGVV(TAG, "get device %d", address);
 
@@ -335,6 +361,11 @@ Device *AwoxMesh::get_device(int mesh_id) {
     ESP_LOGV(TAG, "Found existing mesh_id: %d, Number of found mesh devices = %d", ptr->mesh_id,
              this->mesh_devices_.size());
     return ptr;
+  }
+
+  if (!this->mesh_id_allowed(mesh_id)) {
+    ESP_LOGV(TAG, "Mesh_id: %d ignored, not part of allowed_mesh_ids", mesh_id, );
+    return nullptr;
   }
 
   Device *device = new Device;
@@ -659,6 +690,7 @@ void AwoxMesh::send_discovery(Device *device) {
         }
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = get_mac_address();
+        device_info["serial_number"] = "mesh-id: " + std::to_string(device->mesh_id);
       },
       0, discovery_info.retain);
 
