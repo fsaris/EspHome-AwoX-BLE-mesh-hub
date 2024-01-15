@@ -690,7 +690,7 @@ void AwoxMesh::send_discovery(Device *device) {
         }
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = get_mac_address();
-        device_info["serial_number"] = "mesh-id: " + std::to_string(device->mesh_id);
+        // device_info["serial_number"] = "mesh-id: " + std::to_string(device->mesh_id);
       },
       0, discovery_info.retain);
 
