@@ -6,6 +6,7 @@
 #include "awox_mesh.h"
 #include "device_info.h"
 #include "helpers.h"
+#include "group.h"
 #include "aes/esp_aes.h"
 #include "esphome/core/application.h"
 #include "esphome/core/hal.h"
@@ -312,6 +313,7 @@ void MeshConnection::handle_packet(std::string &packet) {
   int mesh_id, mode;
   bool online, state, color_mode, transition_mode;
   unsigned char white_brightness, temperature, color_brightness, R, G, B;
+  Device *device;
 
   mesh_id = 0;
 
@@ -359,10 +361,9 @@ void MeshConnection::handle_packet(std::string &packet) {
              "c_b: %d, rgb: %02X%02X%02X ",
              mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
 
-  } else if (static_cast<unsigned char>(packet[7]) == 0xD8 && !packet[10]) {
+  } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
-
-    Device *device = this->mesh_->get_device(mesh_id);
+    device = this->mesh_->get_device(mesh_id);
     if (device == nullptr) {
       ESP_LOGD(TAG, "MAC report, dev [%d] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
       return;
@@ -378,7 +379,23 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     this->mesh_->send_discovery(device);
     return;
+  } else if (static_cast<unsigned char>(packet[7]) == COMMAND_GROUP_ID_REPORT) {
+    mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
+    device = this->mesh_->get_device(mesh_id);
+    if (device == nullptr) {
+      ESP_LOGD(TAG, "Group report, dev [%d] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
+      return;
+    }
 
+    for (int i = 10; i < 20; i++) {
+      if (packet[i] == 0xFF) {
+        break;
+      }
+      ESP_LOGD(TAG, "Group report, dev [%d] %d", mesh_id, packet[i]);
+      this->mesh_->get_group(static_cast<unsigned char>(packet[i]), device);
+    }
+
+    return;
   } else {
     ESP_LOGW(TAG, "Unknown report, dev [%d]: command %02X => %s", mesh_id, static_cast<unsigned char>(packet[7]),
              string_as_binary_string(packet).c_str());
@@ -386,7 +403,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     return;
   }
 
-  Device *device = this->mesh_->get_device(mesh_id);
+  device = this->mesh_->get_device(mesh_id);
   if (device == nullptr) {
     ESP_LOGD(TAG, "Report, dev [%d] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
     return;
@@ -539,6 +556,10 @@ void MeshConnection::request_status_update(int dest) { this->queue_command(C_REQ
 
 void MeshConnection::request_device_info(Device *device) {
   this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x00}, device->mesh_id);
+}
+
+void MeshConnection::request_group_info(Device *device) {
+  this->queue_command(COMMAND_GROUP_ID_QUERY, {0x0A, 0x01}, device->mesh_id);
 }
 
 bool MeshConnection::request_device_version(int dest) {

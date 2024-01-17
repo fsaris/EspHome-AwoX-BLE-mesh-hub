@@ -15,6 +15,7 @@
 #include "mesh_connection.h"
 #include "device.h"
 #include "device_info.h"
+#include "group.h"
 
 namespace esphome {
 namespace awox_mesh {
@@ -58,9 +59,11 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void sort_devices();
   void set_rssi_for_devices_that_are_not_available();
   void process_incomming_command(Device *device, JsonObject root);
+  void process_incomming_command(Group *group, JsonObject root);
 
   void publish_connection_sensor_discovery();
   std::string get_mqtt_topic_for_(Device *device, const std::string &suffix) const;
+  std::string get_mqtt_topic_for_(Group *group, const std::string &suffix) const;
   std::string get_discovery_topic_(const esphome::mqtt::MQTTDiscoveryInfo &discovery_info, Device *device) const;
 
   void call_connection(int dest, std::function<void(MeshConnection *)> &&callback);
@@ -70,6 +73,10 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   bool mesh_id_allowed(int mesh_id);
   bool mac_addresses_allowed(const uint64_t address);
+
+  void send_group_discovery(Group *group);
+
+  void sync_and_publish_group_state(Group *group);
 
  public:
   void set_mesh_name(const std::string &mesh_name) {
@@ -110,16 +117,20 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   Device *get_device(int dest);
   Device *get_device(const uint64_t address);
+  Group *get_group(int dest, Device *device);
 
   void publish_availability(Device *device, bool delayed);
+  void publish_availability(Group *group);
   void send_discovery(Device *device);
   void publish_state(Device *device);
+  void publish_state(Group *group);
   void publish_connected();
 
  protected:
   std::vector<MeshConnection *> connections_{};
   std::vector<FoundDevice *> found_devices_{};
   std::vector<Device *> mesh_devices_{};
+  std::vector<Group *> mesh_groups_{};
   std::vector<int> allowed_mesh_ids_{};
   std::vector<uint64_t> allowed_mac_addresses_{};
 

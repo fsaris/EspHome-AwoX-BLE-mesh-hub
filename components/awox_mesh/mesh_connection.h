@@ -28,6 +28,8 @@ static std::string uuid_pair_char = "00010203-0405-0607-0809-0a0b0c0d1914";
 
 #define COMMAND_ONLINE_STATUS_REPORT 0xDC
 #define COMMAND_STATUS_REPORT 0xDB
+#define COMMAND_ADDRESS_REPORT 0xD8
+#define COMMAND_GROUP_ID_REPORT 0xD4
 
 #define C_REQUEST_STATUS 0xda
 #define C_POWER 0xd0
@@ -36,9 +38,10 @@ static std::string uuid_pair_char = "00010203-0405-0607-0809-0a0b0c0d1914";
 #define C_WHITE_BRIGHTNESS 0xf1
 #define C_WHITE_TEMPERATURE 0xf0
 #define COMMAND_ADDRESS 0xE0
-#define COMMAND_ADDRESS_REPORT 0xE1
+#define COMMAND_ADDRESS_REPORT_QUERY 0xE1
 #define COMMAND_DEVICE_INFO_QUERY 0xEA
 #define COMMAND_DEVICE_INFO_REPORT 0xEB
+#define COMMAND_GROUP_ID_QUERY 0xDD
 
 struct QueuedCommand {
   int command;
@@ -166,6 +169,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
   void request_status_update(int dest);
 
   void request_device_info(Device *device);
+
+  void request_group_info(Device *device);
 
   bool request_device_version(int dest);
 
