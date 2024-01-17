@@ -6,6 +6,8 @@ For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml).
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
+### Devices
+
 When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
 
 Each device type/product can be configured by `product_id` so it gets the correct features in HomeAssistant.
@@ -733,6 +735,16 @@ device_info:
 ```
 </details>
 
+### Groups/zones
+
+The groups (called zone in AwoxHomeControl) are automaticly discovered as lights with the group id as name (example: `Group 3`).
+
+When using HomeAssistant the groups will show up as a device under the MQTT integration. And you can (re)name the group/device there.
+
+When 1 light in a group is `on` the group will be shown as `on`. If 1 light in the group is `online` the group will be shown `online`.
+
+
+#### Hidden SSID WLAN
 In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
 
 

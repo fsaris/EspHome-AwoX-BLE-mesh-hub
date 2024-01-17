@@ -63,7 +63,27 @@ esp32_ble_tracker:
 awox_mesh:
   mesh_name: !secret mesh_name
   mesh_password: !secret mesh_password
-  address_prefix: A4:C1
+
+  # Optional options
+
+  # address_prefix: A4:C1
+  # min_rssi: -90 # to prevent that the mesh tries to connect to devices that are out of range
+  # max_connections: 2 # max 3 connections
+
+  # You can give a list of mesh_ids that only should be handled by this device
+  # Example when you want to setup multiple ESP modules to only control a part of the mesh) be sure to also set allowed_mac_addresses option.
+
+  # allowed_mesh_ids:
+  #   - 12345
+  #   - 23456
+  #   - 6758
+
+  # You can give a list of mac_addresses that are allowed to connect to (to exclude some devices that are often ofline or for the allowed_mesh_ids option)
+
+  # allowed_mac_addresses:
+  #   - A4:C1:38:8A:BA:11
+  #   - A4:C1:38:65:AD:22
+
   device_info:
     # Example device type, see device info in HomeAssistant or MQTT message to find the 'product_id'
     - product_id: 0x32
