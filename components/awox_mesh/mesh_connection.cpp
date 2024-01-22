@@ -336,8 +336,9 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "online status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02X%02X%02X ",
-             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
+             "c_b: %d, rgb: %02X%02X%02X, mode: %d %02X",
+             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
+             mode, mode);
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
     mode = static_cast<unsigned char>(packet[10]);
@@ -358,8 +359,9 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02X%02X%02X ",
-             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B);
+             "c_b: %d, rgb: %02X%02X%02X, mode: %d %02X",
+             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
+             mode, mode);
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
@@ -397,6 +399,7 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     return;
   } else {
+    mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
     ESP_LOGW(TAG, "Unknown report, dev [%d]: command %02X => %s", mesh_id, static_cast<unsigned char>(packet[7]),
              string_as_binary_string(packet).c_str());
 
@@ -550,6 +553,12 @@ void MeshConnection::set_white_brightness(int dest, int brightness) {
 
 void MeshConnection::set_white_temperature(int dest, int temp) {
   this->queue_command(C_WHITE_TEMPERATURE, {static_cast<char>(temp)}, dest);
+}
+
+void MeshConnection::set_preset(int dest, int preset) {
+  this->queue_command(C_PRESET, {static_cast<char>(preset)}, dest);
+  // this->queue_command(C_SEQUENCE_COLOR_DURATION, {static_cast<char>(500)}, dest);
+  // this->queue_command(C_SEQUENCE_FADE_DURATION, {static_cast<char>(500)}, dest);
 }
 
 void MeshConnection::request_status_update(int dest) { this->queue_command(C_REQUEST_STATUS, {0x10}, dest); }

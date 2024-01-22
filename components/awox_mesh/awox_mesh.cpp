@@ -760,6 +760,11 @@ void AwoxMesh::send_discovery(Device *device) {
 
         if (device->device_info->has_feature(FEATURE_COLOR)) {
           color_modes.add("rgb");
+
+          root["effect"] = true;
+          JsonArray effect_list = root.createNestedArray(MQTT_EFFECT_LIST);
+          effect_list.add("candle");
+          effect_list.add("color_change");
         }
 
         if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
@@ -879,6 +884,11 @@ void AwoxMesh::send_group_discovery(Group *group) {
 
         if (group->device_info->has_feature(FEATURE_COLOR)) {
           color_modes.add("rgb");
+
+          root["effect"] = true;
+          JsonArray effect_list = root.createNestedArray(MQTT_EFFECT_LIST);
+          effect_list.add("candle");
+          effect_list.add("color_change");
         }
 
         if (group->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
@@ -975,6 +985,16 @@ void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
     this->set_white_temperature(device->mesh_id, temperature);
   }
 
+  if (root.containsKey("effect")) {
+    state_set = true;
+
+    if (root["effect"] == "color_change") {
+      this->set_preset(device->mesh_id, 0);
+    } else if (root["effect"] == "candle") {
+      this->set_preset(device->mesh_id, 2);
+    }
+  }
+
   if (root.containsKey("state")) {
     ESP_LOGD(TAG, "[%d] Process command state", device->mesh_id);
     auto val = parse_on_off(root["state"]);
@@ -1051,6 +1071,15 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
 
     ESP_LOGD(TAG, "[%d] Process group command color_temp %d", dest, (int) root["color_temp"]);
     this->set_white_temperature(dest, temperature);
+  }
+
+  if (root.containsKey("effect")) {
+    state_set = true;
+    if (root["effect"] == "color_change") {
+      this->set_preset(dest, 0);
+    } else if (root["effect"] == "candle") {
+      this->set_preset(dest, 2);
+    }
   }
 
   if (root.containsKey("state")) {
@@ -1144,6 +1173,10 @@ void AwoxMesh::set_white_brightness(int dest, int brightness) {
 void AwoxMesh::set_white_temperature(int dest, int temp) {
   this->call_connection(dest,
                         [dest, temp](MeshConnection *connection) { connection->set_white_temperature(dest, temp); });
+}
+
+void AwoxMesh::set_preset(int dest, int temp) {
+  this->call_connection(dest, [dest, temp](MeshConnection *connection) { connection->set_preset(dest, temp); });
 }
 
 void AwoxMesh::request_status_update(int dest) {

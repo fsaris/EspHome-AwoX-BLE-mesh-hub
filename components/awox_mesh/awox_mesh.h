@@ -140,6 +140,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void set_color_brightness(int dest, int brightness);
   void set_white_brightness(int dest, int brightness);
   void set_white_temperature(int dest, int temp);
+  void set_preset(int dest, int preset);
   void request_status_update(int dest);
 };
 
