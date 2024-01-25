@@ -171,6 +171,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void set_preset(int dest, int preset);
 
+  void set_fade_duration(int dest, int duration);
+
   void request_status_update(int dest);
 
   void request_device_info(Device *device);

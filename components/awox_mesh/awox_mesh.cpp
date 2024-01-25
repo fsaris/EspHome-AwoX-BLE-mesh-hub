@@ -933,6 +933,11 @@ void AwoxMesh::send_group_discovery(Group *group) {
 void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
   ESP_LOGV(TAG, "[%d] Process command", device->mesh_id);
   bool state_set = false;
+
+  if (root.containsKey("transition")) {
+    this->set_fade_duration(device->mesh_id, (int) root["transition"] * 1000);
+  }
+
   if (root.containsKey("color")) {
     JsonObject color = root["color"];
 
@@ -1021,6 +1026,11 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
   ESP_LOGD(TAG, "[%d] Process command group", group->group_id);
   int dest = group->group_id + 0x8000;
   bool state_set = false;
+
+  if (root.containsKey("transition")) {
+    this->set_fade_duration(dest, (int) root["transition"] * 1000);
+  }
+
   if (root.containsKey("color")) {
     JsonObject color = root["color"];
 
@@ -1171,8 +1181,13 @@ void AwoxMesh::set_white_temperature(int dest, int temp) {
                         [dest, temp](MeshConnection *connection) { connection->set_white_temperature(dest, temp); });
 }
 
-void AwoxMesh::set_preset(int dest, int temp) {
-  this->call_connection(dest, [dest, temp](MeshConnection *connection) { connection->set_preset(dest, temp); });
+void AwoxMesh::set_preset(int dest, int preset) {
+  this->call_connection(dest, [dest, preset](MeshConnection *connection) { connection->set_preset(dest, preset); });
+}
+
+void AwoxMesh::set_fade_duration(int dest, int duration) {
+  this->call_connection(
+      dest, [dest, duration](MeshConnection *connection) { connection->set_fade_duration(dest, duration); });
 }
 
 void AwoxMesh::request_status_update(int dest) {

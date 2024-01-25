@@ -561,6 +561,10 @@ void MeshConnection::set_preset(int dest, int preset) {
   // this->queue_command(C_SEQUENCE_FADE_DURATION, {static_cast<char>(500)}, dest);
 }
 
+void MeshConnection::set_fade_duration(int dest, int duration) {
+  this->queue_command(C_SEQUENCE_FADE_DURATION, {static_cast<char>(duration)}, dest);
+}
+
 void MeshConnection::request_status_update(int dest) { this->queue_command(C_REQUEST_STATUS, {0x10}, dest); }
 
 void MeshConnection::request_device_info(Device *device) {
