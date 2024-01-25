@@ -344,8 +344,6 @@ bool AwoxMesh::mesh_id_allowed(int mesh_id) {
 }
 
 Device *AwoxMesh::get_device(const uint64_t address) {
-  ESP_LOGVV(TAG, "get device %d", address);
-
   auto found = std::find_if(this->mesh_devices_.begin(), this->mesh_devices_.end(),
                             [address](const Device *_f) { return _f->address_uint64() == address; });
 
@@ -357,8 +355,6 @@ Device *AwoxMesh::get_device(const uint64_t address) {
 }
 
 Device *AwoxMesh::get_device(int mesh_id) {
-  ESP_LOGVV(TAG, "get device %d", mesh_id);
-
   auto found = std::find_if(this->mesh_devices_.begin(), this->mesh_devices_.end(),
                             [mesh_id](const Device *_f) { return _f->mesh_id == mesh_id; });
 
@@ -370,7 +366,7 @@ Device *AwoxMesh::get_device(int mesh_id) {
   }
 
   if (!this->mesh_id_allowed(mesh_id)) {
-    ESP_LOGV(TAG, "Mesh_id: %d ignored, not part of allowed_mesh_ids", mesh_id, );
+    ESP_LOGV(TAG, "Mesh_id: %d ignored, not part of allowed_mesh_ids", mesh_id);
     return nullptr;
   }
 
@@ -393,7 +389,7 @@ Group *AwoxMesh::get_group(int dest, Device *device) {
 
   if (found != mesh_groups_.end()) {
     Group *group = mesh_groups_.at(found - mesh_groups_.begin());
-    ESP_LOGV(TAG, "Found existing group_id: %d, Number of found mesh groups = %d", ptr->mesh_id,
+    ESP_LOGV(TAG, "Found existing group_id: %d, Number of found mesh groups = %d", group->group_id,
              this->mesh_groups_.size());
 
     group->add_device(device);
