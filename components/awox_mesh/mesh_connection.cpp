@@ -336,9 +336,9 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "online status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02X%02X%02X, mode: %d %02X",
+             "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
              mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
-             mode, mode);
+             mode, std::bitset<8>(mode).to_string().c_str());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
     mode = static_cast<unsigned char>(packet[10]);
@@ -359,9 +359,9 @@ void MeshConnection::handle_packet(std::string &packet) {
 
     ESP_LOGD(TAG,
              "status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
-             "c_b: %d, rgb: %02X%02X%02X, mode: %d %02X",
+             "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
              mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
-             mode, mode);
+             mode, std::bitset<8>(mode).to_string().c_str());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
