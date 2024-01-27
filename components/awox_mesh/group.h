@@ -28,7 +28,8 @@ class Group {
 
   bool state = false;
   bool color_mode = false;
-  bool transition_mode = false;
+  bool sequence_mode = false;
+  bool candle_mode = false;
   unsigned char white_brightness;
   unsigned char temperature;
   unsigned char color_brightness;

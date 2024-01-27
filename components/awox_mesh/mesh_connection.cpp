@@ -311,7 +311,7 @@ void MeshConnection::set_disconnect_callback(std::function<void()> &&f) { this->
 
 void MeshConnection::handle_packet(std::string &packet) {
   int mesh_id, mode;
-  bool online, state, color_mode, transition_mode;
+  bool online, state, color_mode, sequence_mode, candle_mode;
   unsigned char white_brightness, temperature, color_brightness, R, G, B;
   Device *device;
 
@@ -324,7 +324,8 @@ void MeshConnection::handle_packet(std::string &packet) {
     online = packet[11] > 0;
     state = (mode & 1) == 1;
     color_mode = ((mode >> 1) & 1) == 1;
-    transition_mode = ((mode >> 2) & 1) == 1;
+    sequence_mode = ((mode >> 2) & 1) == 1;
+    candle_mode = ((mode >> 4) & 1) == 1;
 
     white_brightness = packet[13];
     temperature = packet[14];
@@ -335,10 +336,11 @@ void MeshConnection::handle_packet(std::string &packet) {
     B = packet[18];
 
     ESP_LOGD(TAG,
-             "online status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
+             "online status report: mesh: %d, on: %d, color_mode: %d, sequence_mode: %d, candle_mode: %d, w_b: %d, "
+             "temp: %d, "
              "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
-             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
-             mode, std::bitset<8>(mode).to_string().c_str());
+             mesh_id, state, color_mode, sequence_mode, candle_mode, white_brightness, temperature, color_brightness, R,
+             G, B, mode, std::bitset<8>(mode).to_string().c_str());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
     mode = static_cast<unsigned char>(packet[10]);
@@ -347,7 +349,8 @@ void MeshConnection::handle_packet(std::string &packet) {
     online = true;
     state = (mode & 1) == 1;
     color_mode = ((mode >> 1) & 1) == 1;
-    transition_mode = ((mode >> 2) & 1) == 1;
+    sequence_mode = ((mode >> 2) & 1) == 1;
+    candle_mode = ((mode >> 4) & 1) == 1;
 
     white_brightness = packet[11];
     temperature = packet[12];
@@ -358,10 +361,10 @@ void MeshConnection::handle_packet(std::string &packet) {
     B = packet[16];
 
     ESP_LOGD(TAG,
-             "status report: mesh: %d, on: %d, color_mode: %d, transition_mode: %d, w_b: %d, temp: %d, "
+             "status report: mesh: %d, on: %d, color_mode: %d, sequence_mode: %d, candle_mode: %d, w_b: %d, temp: %d, "
              "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
-             mesh_id, state, color_mode, transition_mode, white_brightness, temperature, color_brightness, R, G, B,
-             mode, std::bitset<8>(mode).to_string().c_str());
+             mesh_id, state, color_mode, sequence_mode, candle_mode, white_brightness, temperature, color_brightness, R,
+             G, B, mode, std::bitset<8>(mode).to_string().c_str());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
@@ -427,7 +430,8 @@ void MeshConnection::handle_packet(std::string &packet) {
   device->online = online;
   device->state = state;
   device->color_mode = color_mode;
-  device->transition_mode = transition_mode;
+  device->sequence_mode = sequence_mode;
+  device->candle_mode = candle_mode;
 
   device->white_brightness = white_brightness;
   device->temperature = temperature;
@@ -555,14 +559,18 @@ void MeshConnection::set_white_temperature(int dest, int temp) {
   this->queue_command(C_WHITE_TEMPERATURE, {static_cast<char>(temp)}, dest);
 }
 
-void MeshConnection::set_preset(int dest, int preset) {
-  this->queue_command(C_PRESET, {static_cast<char>(preset)}, dest);
-  // this->queue_command(C_SEQUENCE_COLOR_DURATION, {static_cast<char>(500)}, dest);
-  // this->queue_command(C_SEQUENCE_FADE_DURATION, {static_cast<char>(500)}, dest);
+void MeshConnection::set_sequence(int dest, int sequence) {
+  this->queue_command(C_SEQUENCE, {static_cast<char>(sequence)}, dest);
 }
 
-void MeshConnection::set_fade_duration(int dest, int duration) {
+void MeshConnection::set_candle_mode(int dest) { this->queue_command(C_CANDLE_MODE, {0}, dest); }
+
+void MeshConnection::set_sequence_fade_duration(int dest, int duration) {
   this->queue_command(C_SEQUENCE_FADE_DURATION, {static_cast<char>(duration)}, dest);
+}
+
+void MeshConnection::set_sequence_color_duration(int dest, int duration) {
+  this->queue_command(C_SEQUENCE_COLOR_DURATION, {static_cast<char>(duration)}, dest);
 }
 
 void MeshConnection::request_status_update(int dest) { this->queue_command(C_REQUEST_STATUS, {0x10}, dest); }

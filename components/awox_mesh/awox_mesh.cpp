@@ -521,15 +521,23 @@ void AwoxMesh::publish_state(Device *device) {
         [this, device](JsonObject root) {
           root["state"] = device->state ? "ON" : "OFF";
 
-          root["color_mode"] = "color_temp";
-
-          root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
+          if (device->candle_mode) {
+            root["effect"] = "candle";
+          } else if (device->sequence_mode) {
+            root["effect"] = "color loop";
+          }
 
           if (device->color_mode) {
             root["color_mode"] = "rgb";
             root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
           } else {
-            root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
+            if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
+              root["color_mode"] = "color_temp";
+              root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
+            } else {
+              root["color_mode"] = "brightness";
+            }
+            root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
           }
           JsonObject color = root.createNestedObject("color");
           color["r"] = device->R;
@@ -557,6 +565,12 @@ void AwoxMesh::publish_state(Group *group) {
         this->get_mqtt_topic_for_(group, "state"),
         [this, group](JsonObject root) {
           root["state"] = group->state ? "ON" : "OFF";
+
+          if (group->candle_mode) {
+            root["effect"] = "candle";
+          } else if (group->sequence_mode) {
+            root["effect"] = "color loop";
+          }
 
           root["color_mode"] = "color_temp";
 
@@ -760,7 +774,8 @@ void AwoxMesh::send_discovery(Device *device) {
           root["effect"] = true;
           JsonArray effect_list = root.createNestedArray(MQTT_EFFECT_LIST);
           effect_list.add("candle");
-          effect_list.add("color_change");
+          effect_list.add("color loop");
+          effect_list.add("stop");
         }
 
         if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
@@ -884,7 +899,8 @@ void AwoxMesh::send_group_discovery(Group *group) {
           root["effect"] = true;
           JsonArray effect_list = root.createNestedArray(MQTT_EFFECT_LIST);
           effect_list.add("candle");
-          effect_list.add("color_change");
+          effect_list.add("color loop");
+          effect_list.add("stop");
         }
 
         if (group->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
@@ -934,8 +950,14 @@ void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
   ESP_LOGV(TAG, "[%d] Process command", device->mesh_id);
   bool state_set = false;
 
-  if (root.containsKey("transition")) {
-    this->set_fade_duration(device->mesh_id, (int) root["transition"] * 1000);
+  if (root.containsKey("fade_duration")) {
+    ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", device->mesh_id, (int) root["fade_duration"]);
+    this->set_sequence_fade_duration(device->mesh_id, (int) root["fade_duration"]);
+  }
+
+  if (root.containsKey("color_duration")) {
+    ESP_LOGD(TAG, "[%d] set sequence color_duration %d", device->mesh_id, (int) root["color_duration"]);
+    this->set_sequence_color_duration(device->mesh_id, (int) root["color_duration"]);
   }
 
   if (root.containsKey("color")) {
@@ -989,10 +1011,18 @@ void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
   if (root.containsKey("effect")) {
     state_set = true;
 
-    if (root["effect"] == "color_change") {
-      this->set_preset(device->mesh_id, 0);
+    if (root["effect"] == "color loop") {
+      ESP_LOGD(TAG, "[%d] Effect command %s", device->mesh_id, "color loop");
+      this->set_sequence(device->mesh_id, 0);
     } else if (root["effect"] == "candle") {
-      this->set_preset(device->mesh_id, 2);
+      ESP_LOGD(TAG, "[%d] Effect command %s", device->mesh_id, "candle");
+      this->set_candle_mode(device->mesh_id);
+    } else {
+      if (device->color_mode) {
+        this->set_color(device->mesh_id, device->R, device->G, device->B);
+      } else {
+        this->set_white_temperature(device->mesh_id, device->temperature);
+      }
     }
   }
 
@@ -1027,8 +1057,14 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
   int dest = group->group_id + 0x8000;
   bool state_set = false;
 
-  if (root.containsKey("transition")) {
-    this->set_fade_duration(dest, (int) root["transition"] * 1000);
+  if (root.containsKey("fade_duration")) {
+    ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", dest, (int) root["fade_duration"]);
+    this->set_sequence_fade_duration(dest, (int) root["fade_duration"]);
+  }
+
+  if (root.containsKey("color_duration")) {
+    ESP_LOGD(TAG, "[%d] set sequence color_duration %d", dest, (int) root["color_duration"]);
+    this->set_sequence_color_duration(dest, (int) root["color_duration"]);
   }
 
   if (root.containsKey("color")) {
@@ -1036,6 +1072,7 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
 
     state_set = true;
     group->state = true;
+    group->color_mode = true;
     group->R = (int) color["r"];
     group->G = (int) color["g"];
     group->B = (int) color["b"];
@@ -1073,6 +1110,7 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
 
     state_set = true;
     group->state = true;
+    group->color_mode = false;
     group->temperature = temperature;
 
     ESP_LOGD(TAG, "[%d] Process group command color_temp %d", dest, (int) root["color_temp"]);
@@ -1081,10 +1119,21 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
 
   if (root.containsKey("effect")) {
     state_set = true;
-    if (root["effect"] == "color_change") {
-      this->set_preset(dest, 0);
+    group->state = true;
+    group->sequence_mode = false;
+    group->candle_mode = false;
+    if (root["effect"] == "color loop") {
+      group->sequence_mode = true;
+      this->set_sequence(dest, 0);
     } else if (root["effect"] == "candle") {
-      this->set_preset(dest, 2);
+      group->candle_mode = true;
+      this->set_candle_mode(dest);
+    } else {
+      if (group->color_mode) {
+        this->set_color(dest, group->R, group->G, group->B);
+      } else {
+        this->set_white_temperature(dest, group->temperature);
+      }
     }
   }
 
@@ -1181,13 +1230,22 @@ void AwoxMesh::set_white_temperature(int dest, int temp) {
                         [dest, temp](MeshConnection *connection) { connection->set_white_temperature(dest, temp); });
 }
 
-void AwoxMesh::set_preset(int dest, int preset) {
-  this->call_connection(dest, [dest, preset](MeshConnection *connection) { connection->set_preset(dest, preset); });
+void AwoxMesh::set_sequence(int dest, int preset) {
+  this->call_connection(dest, [dest, preset](MeshConnection *connection) { connection->set_sequence(dest, preset); });
 }
 
-void AwoxMesh::set_fade_duration(int dest, int duration) {
+void AwoxMesh::set_candle_mode(int dest) {
+  this->call_connection(dest, [dest](MeshConnection *connection) { connection->set_candle_mode(dest); });
+}
+
+void AwoxMesh::set_sequence_fade_duration(int dest, int duration) {
   this->call_connection(
-      dest, [dest, duration](MeshConnection *connection) { connection->set_fade_duration(dest, duration); });
+      dest, [dest, duration](MeshConnection *connection) { connection->set_sequence_fade_duration(dest, duration); });
+}
+
+void AwoxMesh::set_sequence_color_duration(int dest, int duration) {
+  this->call_connection(
+      dest, [dest, duration](MeshConnection *connection) { connection->set_sequence_color_duration(dest, duration); });
 }
 
 void AwoxMesh::request_status_update(int dest) {
