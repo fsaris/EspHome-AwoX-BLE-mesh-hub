@@ -12,6 +12,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 
+#include "awox_mesh_mqtt.h"
 #include "mesh_destination.h"
 #include "mesh_connection.h"
 #include "device.h"
@@ -41,13 +42,20 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   uint32_t start;
 
   bool ready_to_connect = false;
+
   bool has_active_connection = false;
+
   uint32_t last_connection_attempt = 0;
 
   int minimum_rssi = -90;
+
   std::string mesh_name = "";
+
   std::string mesh_password = "";
+
   std::string address_prefix = "A4:C1";
+
+  AwoxMeshMqtt *publish_connection;
 
   DeviceInfoResolver *device_info_resolver = new DeviceInfoResolver();
 
@@ -62,14 +70,6 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void sort_devices();
 
   void set_rssi_for_devices_that_are_not_available();
-
-  void process_incomming_command(MeshDestination *mesh_destination, JsonObject root);
-
-  void publish_connection_sensor_discovery();
-
-  std::string get_mqtt_topic_for_(MeshDestination *mesh_destination, const std::string &suffix) const;
-
-  std::string get_discovery_topic_(const esphome::mqtt::MQTTDiscoveryInfo &discovery_info, Device *device) const;
 
   void call_connection(int dest, std::function<void(MeshConnection *)> &&callback);
 
@@ -104,9 +104,14 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void add_allowed_mac_address(const uint64_t mac_address) { this->allowed_mac_addresses_.push_back(mac_address); }
 
   float get_setup_priority() const override;
+
   void setup() override;
 
-  AwoxMesh() { this->start = esphome::millis(); }
+  AwoxMesh() {
+    this->start = esphome::millis();
+    this->publish_connection = new AwoxMeshMqtt(this);
+  }
+
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 
   void on_scan_end() override { ESP_LOGD("awox.mesh", "scan end"); }
@@ -123,14 +128,28 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void loop() override;
 
   Device *get_device(int dest);
+
   Device *get_device(const uint64_t address);
+
   Group *get_group(int dest, Device *device);
 
   void publish_availability(Device *device, bool delayed);
-  void publish_availability(Group *group);
+
   void send_discovery(Device *device);
+
   void publish_state(MeshDestination *mesh_destination);
+
   void publish_connected();
+
+  void set_power(int dest, bool state);
+  void set_color(int dest, int red, int green, int blue);
+  void set_color_brightness(int dest, int brightness);
+  void set_white_brightness(int dest, int brightness);
+  void set_white_temperature(int dest, int temp);
+  void set_sequence(int dest, int sequence);
+  void set_candle_mode(int dest);
+  void set_sequence_fade_duration(int dest, int duration);
+  void set_sequence_color_duration(int dest, int duration);
 
  protected:
   std::vector<MeshConnection *> connections_{};
@@ -141,15 +160,6 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   std::vector<uint64_t> allowed_mac_addresses_{};
 
   void request_device_info(Device *device);
-  void set_power(int dest, bool state);
-  void set_color(int dest, int red, int green, int blue);
-  void set_color_brightness(int dest, int brightness);
-  void set_white_brightness(int dest, int brightness);
-  void set_white_temperature(int dest, int temp);
-  void set_sequence(int dest, int sequence);
-  void set_candle_mode(int dest);
-  void set_sequence_fade_duration(int dest, int duration);
-  void set_sequence_color_duration(int dest, int duration);
   void request_status_update(int dest);
 };
 
