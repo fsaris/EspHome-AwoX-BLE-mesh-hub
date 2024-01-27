@@ -509,88 +509,49 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   this->publish_state(group);
 }
 
-void AwoxMesh::publish_state(Device *device) {
-  if (!device->address_set()) {
-    ESP_LOGW(TAG, "'%s': Can not yet send publish state, mac address not known...",
-             std::to_string(device->mesh_id).c_str());
+void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
+  if (!mesh_destination->can_publish_state()) {
+    ESP_LOGW(TAG, "[%d] Can not yet send publish state for %s", mesh_destination->dest(), mesh_destination->type());
     return;
   }
-  if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+  if (mesh_destination->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->publish_json(
-        this->get_mqtt_topic_for_(device, "state"),
-        [this, device](JsonObject root) {
-          root["state"] = device->state ? "ON" : "OFF";
+        this->get_mqtt_topic_for_(mesh_destination, "state"),
+        [this, mesh_destination](JsonObject root) {
+          root["state"] = mesh_destination->state ? "ON" : "OFF";
 
-          if (device->candle_mode) {
+          if (mesh_destination->candle_mode) {
             root["effect"] = "candle";
-          } else if (device->sequence_mode) {
+          } else if (mesh_destination->sequence_mode) {
             root["effect"] = "color loop";
           }
 
-          if (device->color_mode) {
+          if (mesh_destination->color_mode) {
             root["color_mode"] = "rgb";
-            root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
+            root["brightness"] =
+                convert_value_to_available_range(mesh_destination->color_brightness, 0xa, 0x64, 0, 255);
           } else {
-            if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
+            if (mesh_destination->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
               root["color_mode"] = "color_temp";
-              root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
+              root["color_temp"] = convert_value_to_available_range(mesh_destination->temperature, 0, 0x7f, 153, 370);
             } else {
               root["color_mode"] = "brightness";
             }
-            root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
+            root["brightness"] = convert_value_to_available_range(mesh_destination->white_brightness, 1, 0x7f, 0, 255);
           }
           JsonObject color = root.createNestedObject("color");
-          color["r"] = device->R;
-          color["g"] = device->G;
-          color["b"] = device->B;
+          color["r"] = mesh_destination->R;
+          color["g"] = mesh_destination->G;
+          color["b"] = mesh_destination->B;
         },
         0, true);
   } else {
-    global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "state"), device->state ? "ON" : "OFF",
-                                device->state ? 2 : 3, 0, true);
+    global_mqtt_client->publish(this->get_mqtt_topic_for_(mesh_destination, "state"),
+                                mesh_destination->state ? "ON" : "OFF", mesh_destination->state ? 2 : 3, 0, true);
   }
 
-  for (Group *group : device->get_groups()) {
+  for (Group *group : mesh_destination->get_groups()) {
     this->sync_and_publish_group_state(group);
-  }
-}
-
-void AwoxMesh::publish_state(Group *group) {
-  if (group->device_info == nullptr) {
-    ESP_LOGW(TAG, "group %d: Can not yet send publish state, device info not known...", group->group_id);
-    return;
-  }
-  if (group->device_info->has_feature(FEATURE_LIGHT_MODE)) {
-    global_mqtt_client->publish_json(
-        this->get_mqtt_topic_for_(group, "state"),
-        [this, group](JsonObject root) {
-          root["state"] = group->state ? "ON" : "OFF";
-
-          if (group->candle_mode) {
-            root["effect"] = "candle";
-          } else if (group->sequence_mode) {
-            root["effect"] = "color loop";
-          }
-
-          root["color_mode"] = "color_temp";
-
-          root["brightness"] = convert_value_to_available_range(group->white_brightness, 1, 0x7f, 0, 255);
-
-          if (group->color_mode) {
-            root["color_mode"] = "rgb";
-            root["brightness"] = convert_value_to_available_range(group->color_brightness, 0xa, 0x64, 0, 255);
-          } else {
-            root["color_temp"] = convert_value_to_available_range(group->temperature, 0, 0x7f, 153, 370);
-          }
-          JsonObject color = root.createNestedObject("color");
-          color["r"] = group->R;
-          color["g"] = group->G;
-          color["b"] = group->B;
-        },
-        0, true);
-  } else {
-    global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "state"), group->state ? "ON" : "OFF",
-                                group->state ? 2 : 3, 0, true);
   }
 }
 
@@ -946,116 +907,11 @@ void AwoxMesh::send_group_discovery(Group *group) {
   this->publish_availability(group);
 }
 
-void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
-  ESP_LOGV(TAG, "[%d] Process command", device->mesh_id);
+void AwoxMesh::process_incomming_command(MeshDestination *mesh_destination, JsonObject root) {
+  int dest = mesh_destination->dest();
   bool state_set = false;
 
-  if (root.containsKey("fade_duration")) {
-    ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", device->mesh_id, (int) root["fade_duration"]);
-    this->set_sequence_fade_duration(device->mesh_id, (int) root["fade_duration"]);
-  }
-
-  if (root.containsKey("color_duration")) {
-    ESP_LOGD(TAG, "[%d] set sequence color_duration %d", device->mesh_id, (int) root["color_duration"]);
-    this->set_sequence_color_duration(device->mesh_id, (int) root["color_duration"]);
-  }
-
-  if (root.containsKey("color")) {
-    JsonObject color = root["color"];
-
-    state_set = true;
-    device->state = true;
-    device->R = (int) color["r"];
-    device->G = (int) color["g"];
-    device->B = (int) color["b"];
-
-    ESP_LOGD(TAG, "[%d] Process command color %d %d %d", device->mesh_id, (int) color["r"], (int) color["g"],
-             (int) color["b"]);
-
-    this->set_color(device->mesh_id, (int) color["r"], (int) color["g"], (int) color["b"]);
-  }
-
-  if (root.containsKey("brightness") && !root.containsKey("color_temp") &&
-      (root.containsKey("color") || device->color_mode)) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 0xa, 0x64);
-
-    state_set = true;
-    device->state = true;
-    device->color_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process command color_brightness %d", device->mesh_id, (int) root["brightness"]);
-    this->set_color_brightness(device->mesh_id, brightness);
-
-  } else if (root.containsKey("brightness")) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 1, 0x7f);
-
-    state_set = true;
-    device->state = true;
-    device->white_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process command white_brightness %d", device->mesh_id, (int) root["brightness"]);
-    this->set_white_brightness(device->mesh_id, brightness);
-  }
-
-  if (root.containsKey("color_temp")) {
-    int temperature = convert_value_to_available_range((int) root["color_temp"], 153, 370, 0, 0x7f);
-
-    state_set = true;
-    device->state = true;
-    device->temperature = temperature;
-
-    ESP_LOGD(TAG, "[%d] Process command color_temp %d", device->mesh_id, (int) root["color_temp"]);
-    this->set_white_temperature(device->mesh_id, temperature);
-  }
-
-  if (root.containsKey("effect")) {
-    state_set = true;
-
-    if (root["effect"] == "color loop") {
-      ESP_LOGD(TAG, "[%d] Effect command %s", device->mesh_id, "color loop");
-      this->set_sequence(device->mesh_id, 0);
-    } else if (root["effect"] == "candle") {
-      ESP_LOGD(TAG, "[%d] Effect command %s", device->mesh_id, "candle");
-      this->set_candle_mode(device->mesh_id);
-    } else {
-      if (device->color_mode) {
-        this->set_color(device->mesh_id, device->R, device->G, device->B);
-      } else {
-        this->set_white_temperature(device->mesh_id, device->temperature);
-      }
-    }
-  }
-
-  if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "[%d] Process command state", device->mesh_id);
-    auto val = parse_on_off(root["state"]);
-    switch (val) {
-      case PARSE_ON:
-        device->state = true;
-        if (!state_set) {
-          this->set_power(device->mesh_id, true);
-        }
-        break;
-      case PARSE_OFF:
-        device->state = false;
-        this->set_power(device->mesh_id, false);
-        break;
-      case PARSE_TOGGLE:
-        device->state = !device->state;
-        this->set_power(device->mesh_id, device->state);
-        break;
-      case PARSE_NONE:
-        break;
-    }
-  }
-
-  this->publish_state(device);
-}
-
-void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
-  ESP_LOGD(TAG, "[%d] Process command group", group->group_id);
-  int dest = group->group_id + 0x8000;
-  bool state_set = false;
+  ESP_LOGD(TAG, "[%d] Process command %s", dest, mesh_destination->type());
 
   if (root.containsKey("fade_duration")) {
     ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", dest, (int) root["fade_duration"]);
@@ -1071,37 +927,36 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
     JsonObject color = root["color"];
 
     state_set = true;
-    group->state = true;
-    group->color_mode = true;
-    group->R = (int) color["r"];
-    group->G = (int) color["g"];
-    group->B = (int) color["b"];
+    mesh_destination->state = true;
+    mesh_destination->color_mode = true;
+    mesh_destination->R = (int) color["r"];
+    mesh_destination->G = (int) color["g"];
+    mesh_destination->B = (int) color["b"];
 
-    ESP_LOGD(TAG, "[%d] Process group command color %d %d %d", group->group_id, (int) color["r"], (int) color["g"],
-             (int) color["b"]);
+    ESP_LOGD(TAG, "[%d] Process command color %d %d %d", dest, (int) color["r"], (int) color["g"], (int) color["b"]);
 
     this->set_color(dest, (int) color["r"], (int) color["g"], (int) color["b"]);
   }
 
   if (root.containsKey("brightness") && !root.containsKey("color_temp") &&
-      (root.containsKey("color") || group->color_mode)) {
+      (root.containsKey("color") || mesh_destination->color_mode)) {
     int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 0xa, 0x64);
 
     state_set = true;
-    group->state = true;
-    group->color_brightness = brightness;
+    mesh_destination->state = true;
+    mesh_destination->color_brightness = brightness;
 
-    ESP_LOGD(TAG, "[%d] Process group command color_brightness %d", dest, (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%d] Process command color_brightness %d", dest, (int) root["brightness"]);
     this->set_color_brightness(dest, brightness);
 
   } else if (root.containsKey("brightness")) {
     int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 1, 0x7f);
 
     state_set = true;
-    group->state = true;
-    group->white_brightness = brightness;
+    mesh_destination->state = true;
+    mesh_destination->white_brightness = brightness;
 
-    ESP_LOGD(TAG, "[%d] Process group command white_brightness %d", dest, (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%d] Process command white_brightness %d", dest, (int) root["brightness"]);
     this->set_white_brightness(dest, brightness);
   }
 
@@ -1109,58 +964,58 @@ void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
     int temperature = convert_value_to_available_range((int) root["color_temp"], 153, 370, 0, 0x7f);
 
     state_set = true;
-    group->state = true;
-    group->color_mode = false;
-    group->temperature = temperature;
+    mesh_destination->state = true;
+    mesh_destination->color_mode = false;
+    mesh_destination->temperature = temperature;
 
-    ESP_LOGD(TAG, "[%d] Process group command color_temp %d", dest, (int) root["color_temp"]);
+    ESP_LOGD(TAG, "[%d] Process command color_temp %d", dest, (int) root["color_temp"]);
     this->set_white_temperature(dest, temperature);
   }
 
   if (root.containsKey("effect")) {
     state_set = true;
-    group->state = true;
-    group->sequence_mode = false;
-    group->candle_mode = false;
+    mesh_destination->state = true;
+    mesh_destination->sequence_mode = false;
+    mesh_destination->candle_mode = false;
     if (root["effect"] == "color loop") {
-      group->sequence_mode = true;
+      mesh_destination->sequence_mode = true;
       this->set_sequence(dest, 0);
     } else if (root["effect"] == "candle") {
-      group->candle_mode = true;
+      mesh_destination->candle_mode = true;
       this->set_candle_mode(dest);
     } else {
-      if (group->color_mode) {
-        this->set_color(dest, group->R, group->G, group->B);
+      if (mesh_destination->color_mode) {
+        this->set_color(dest, mesh_destination->R, mesh_destination->G, mesh_destination->B);
       } else {
-        this->set_white_temperature(dest, group->temperature);
+        this->set_white_temperature(dest, mesh_destination->temperature);
       }
     }
   }
 
   if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "[%d] Process group command state", dest);
+    ESP_LOGD(TAG, "[%d] Process command state", dest);
     auto val = parse_on_off(root["state"]);
     switch (val) {
       case PARSE_ON:
-        group->state = true;
+        mesh_destination->state = true;
         if (!state_set) {
           this->set_power(dest, true);
         }
         break;
       case PARSE_OFF:
-        group->state = false;
+        mesh_destination->state = false;
         this->set_power(dest, false);
         break;
       case PARSE_TOGGLE:
-        group->state = !group->state;
-        this->set_power(dest, group->state);
+        mesh_destination->state = !mesh_destination->state;
+        this->set_power(dest, mesh_destination->state);
         break;
       case PARSE_NONE:
         break;
     }
   }
 
-  this->publish_state(group);
+  this->publish_state(mesh_destination);
 }
 
 std::string AwoxMesh::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
@@ -1168,18 +1023,17 @@ std::string AwoxMesh::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_in
          device->address_str_hex_only() + "/config";
 }
 
-std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
-  return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(device->mesh_id) + "/" + suffix;
-}
-
-std::string AwoxMesh::get_mqtt_topic_for_(Group *group, const std::string &suffix) const {
-  return global_mqtt_client->get_topic_prefix() + "/group-" + std::to_string(group->group_id) + "/" + suffix;
+std::string AwoxMesh::get_mqtt_topic_for_(MeshDestination *mesh_destination, const std::string &suffix) const {
+  if (strcmp(mesh_destination->type(), "group") == 0) {
+    return global_mqtt_client->get_topic_prefix() + "/group-" + std::to_string(mesh_destination->dest()) + "/" + suffix;
+  } else {
+    return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(mesh_destination->dest()) + "/" + suffix;
+  }
 }
 
 void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &&callback) {
   ESP_LOGD(TAG, "Call connection for %d", dest);
   for (auto *connection : this->connections_) {
-    // todo: when supporting groups dest doesn't have to be a linked mesh_id
     if (connection->get_address() > 0 && connection->mesh_id_linked(dest)) {
       ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
       callback(connection);
@@ -1189,7 +1043,7 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
     }
   }
 
-  ESP_LOGI(TAG, "No active connection for %d, we trigger message on all", dest);
+  ESP_LOGI(TAG, "No active connection for %d, we trigger message on all could be also a group", dest);
   for (auto *connection : this->connections_) {
     if (connection->connected()) {
       callback(connection);

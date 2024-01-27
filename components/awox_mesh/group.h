@@ -4,8 +4,8 @@
 
 #include <string>
 #include "device.h"
-#include "device_info.h"
 #include "helpers.h"
+#include "mesh_destination.h"
 #include <vector>
 
 #include <esp_bt_defs.h>
@@ -15,27 +15,21 @@ namespace awox_mesh {
 
 class Device;
 
-class Group {
+class Group : public MeshDestination {
   std::vector<Device *> devices_{};
 
  public:
   int group_id;
-  bool send_discovery = false;
+
   uint32_t last_online = 0;
-  DeviceInfo *device_info;
 
-  bool online;
+  int dest() override { return this->group_id + 0x8000; }
 
-  bool state = false;
-  bool color_mode = false;
-  bool sequence_mode = false;
-  bool candle_mode = false;
-  unsigned char white_brightness;
-  unsigned char temperature;
-  unsigned char color_brightness;
-  unsigned char R;
-  unsigned char G;
-  unsigned char B;
+  const char *type() const override { return "group"; }
+
+  bool can_publish_state() override { return this->device_info != nullptr; };
+
+  std::vector<Group *> get_groups() const override { return std::vector<Group *>{}; };
 
   std::string state_as_string();
 

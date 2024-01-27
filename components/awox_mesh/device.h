@@ -4,8 +4,8 @@
 
 #include <string>
 #include <vector>
-#include "device_info.h"
 #include "helpers.h"
+#include "mesh_destination.h"
 #include <esp_bt_defs.h>
 #include "esphome/components/esp32_ble/ble.h"
 
@@ -16,7 +16,7 @@ using namespace esp32_ble;
 
 class Group;
 
-class Device {
+class Device : public MeshDestination {
   esp_bd_addr_t address_{
       0,
   };
@@ -24,23 +24,18 @@ class Device {
 
  public:
   int mesh_id;
-  int product_id;
-  bool send_discovery = false;
-  uint32_t last_online = 0;
-  uint32_t device_info_requested = 0;
-  bool online;
-  DeviceInfo *device_info;
 
-  bool state = false;
-  bool color_mode = false;
-  bool sequence_mode = false;
-  bool candle_mode = false;
-  unsigned char white_brightness;
-  unsigned char temperature;
-  unsigned char color_brightness;
-  unsigned char R;
-  unsigned char G;
-  unsigned char B;
+  int product_id;
+
+  uint32_t last_online = 0;
+
+  uint32_t device_info_requested = 0;
+
+  int dest() override { return this->mesh_id; };
+
+  const char *type() const override { return "device"; }
+
+  bool can_publish_state() override { return !!this->address_set(); };
 
   std::string address_str() const;
 
@@ -56,7 +51,7 @@ class Device {
 
   void add_group(Group *group);
 
-  std::vector<Group *> get_groups() const;
+  std::vector<Group *> get_groups() const override;
 };
 
 }  // namespace awox_mesh

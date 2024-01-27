@@ -12,6 +12,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 
+#include "mesh_destination.h"
 #include "mesh_connection.h"
 #include "device.h"
 #include "device_info.h"
@@ -55,23 +56,29 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   bool start_up_delay_done();
 
   FoundDevice *add_to_found_devices(const esp32_ble_tracker::ESPBTDevice &device);
+
   FoundDevice *next_to_connect();
+
   void sort_devices();
+
   void set_rssi_for_devices_that_are_not_available();
-  void process_incomming_command(Device *device, JsonObject root);
-  void process_incomming_command(Group *group, JsonObject root);
+
+  void process_incomming_command(MeshDestination *mesh_destination, JsonObject root);
 
   void publish_connection_sensor_discovery();
-  std::string get_mqtt_topic_for_(Device *device, const std::string &suffix) const;
-  std::string get_mqtt_topic_for_(Group *group, const std::string &suffix) const;
+
+  std::string get_mqtt_topic_for_(MeshDestination *mesh_destination, const std::string &suffix) const;
+
   std::string get_discovery_topic_(const esphome::mqtt::MQTTDiscoveryInfo &discovery_info, Device *device) const;
 
   void call_connection(int dest, std::function<void(MeshConnection *)> &&callback);
 
   void disconnect_connections_with_overlapping_mesh_ids();
+
   void disconnect_connection_with_overlapping_mesh_ids(int a, int b);
 
   bool mesh_id_allowed(int mesh_id);
+
   bool mac_addresses_allowed(const uint64_t address);
 
   void send_group_discovery(Group *group);
@@ -122,8 +129,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void publish_availability(Device *device, bool delayed);
   void publish_availability(Group *group);
   void send_discovery(Device *device);
-  void publish_state(Device *device);
-  void publish_state(Group *group);
+  void publish_state(MeshDestination *mesh_destination);
   void publish_connected();
 
  protected:
