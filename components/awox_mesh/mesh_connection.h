@@ -34,9 +34,13 @@ static std::string uuid_pair_char = "00010203-0405-0607-0809-0a0b0c0d1914";
 #define C_REQUEST_STATUS 0xda
 #define C_POWER 0xd0
 #define C_COLOR 0xe2
+#define C_SEQUENCE 0xc8
+#define C_CANDLE_MODE 0xc9
 #define C_COLOR_BRIGHTNESS 0xf2
 #define C_WHITE_BRIGHTNESS 0xf1
 #define C_WHITE_TEMPERATURE 0xf0
+#define C_SEQUENCE_COLOR_DURATION 0xf5
+#define C_SEQUENCE_FADE_DURATION 0xf6
 #define COMMAND_ADDRESS 0xE0
 #define COMMAND_ADDRESS_REPORT_QUERY 0xE1
 #define COMMAND_DEVICE_INFO_QUERY 0xEA
@@ -165,6 +169,14 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
   void set_white_brightness(int dest, int brightness);
 
   void set_white_temperature(int dest, int temp);
+
+  void set_sequence(int dest, int sequence);
+
+  void set_candle_mode(int dest);
+
+  void set_sequence_fade_duration(int dest, int duration);
+
+  void set_sequence_color_duration(int dest, int duration);
 
   void request_status_update(int dest);
 

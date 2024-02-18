@@ -5,10 +5,7 @@
 #include <math.h>
 #include <regex>
 #include "awox_mesh.h"
-#include "esphome/components/mqtt/mqtt_const.h"
-#include "esphome/components/mqtt/mqtt_component.h"
 
-#include "esphome/core/application.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
@@ -16,19 +13,6 @@ namespace awox_mesh {
 
 static const char *const TAG = "awox.mesh";
 static const int RSSI_NOT_AVAILABLE = -9999;
-
-static int convert_value_to_available_range(int value, int min_from, int max_from, int min_to, int max_to) {
-  float normalized = (float) (value - min_from) / (float) (max_from - min_from);
-  int new_value = std::min((int) round((normalized * (float) (max_to - min_to)) + min_to), max_to);
-
-  return std::max(new_value, min_to);
-}
-
-static std::string get_product_code_as_hex_string(int product_id) {
-  char value[15];
-  sprintf(value, "Product: 0x%02X", product_id);
-  return std::string((char *) value, 15);
-}
 
 static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
   std::vector<int>::const_iterator position = std::find(vector.begin(), vector.end(), mesh_id);
@@ -109,23 +93,11 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
 void AwoxMesh::setup() {
   Component::setup();
 
-  // Use retained MQTT messages to publish a default offline status for all devices
-  // todo: move to mqtt class
-  global_mqtt_client->subscribe(
-      global_mqtt_client->get_topic_prefix() + "/#", [this](const std::string &topic, const std::string &payload) {
-        if (std::regex_match(topic, std::regex(global_mqtt_client->get_topic_prefix() + "/[0-9]+/availability"))) {
-          ESP_LOGD(TAG, "Received topic: %s, %s", topic.c_str(), payload.c_str());
-          if (payload == "online") {
-            global_mqtt_client->publish(topic.c_str(), "offline");
-          }
-        }
-      });
-  this->set_timeout("stop_listening_for_availability", 3000,
-                    []() { global_mqtt_client->unsubscribe(global_mqtt_client->get_topic_prefix() + "/#"); });
+  this->publish_connection->setup();
+
+  this->publish_connection->publish_connection_sensor_discovery(this->connections_);
 
   this->set_interval("publish_connection", 5000, [this]() { this->publish_connected(); });
-
-  this->publish_connection_sensor_discovery();
 }
 
 bool AwoxMesh::start_up_delay_done() {
@@ -433,32 +405,7 @@ void AwoxMesh::publish_connected() {
   linked_mesh_ids.erase(unique(linked_mesh_ids.begin(), linked_mesh_ids.end()), linked_mesh_ids.end());
   online_devices = linked_mesh_ids.size();
 
-  const std::string message = this->has_active_connection ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
-  global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
-
-  global_mqtt_client->publish_json(
-      global_mqtt_client->get_topic_prefix() + "/connection_status",
-      [&](JsonObject root) {
-        root["now"] = esphome::millis();
-        root["active_connections"] = active_connections;
-        root["online_devices"] = online_devices;
-
-        for (int i = 0; i < this->connections_.size(); i++) {
-          JsonObject connection = root.createNestedObject("connection_" + std::to_string(i));
-          connection["connected"] = this->connections_[i]->connected();
-          connection["mac"] = this->connections_[i]->connected() ? this->connections_[i]->address_str() : "";
-          connection["mesh_id"] =
-              this->connections_[i]->connected() ? std::to_string(this->connections_[i]->mesh_id()) : "";
-          connection["devices"] = this->connections_[i]->get_linked_mesh_ids().size();
-
-          std::stringstream mesh_ids;
-          std::copy(this->connections_[i]->get_linked_mesh_ids().begin(),
-                    this->connections_[i]->get_linked_mesh_ids().end(), std::ostream_iterator<int>(mesh_ids, ", "));
-          connection["mesh_ids"] = mesh_ids.str().substr(0, mesh_ids.str().size() - 2);
-        }
-      },
-      0, false);
+  this->publish_connection->publish_connected(this->has_active_connection, online_devices, this->connections_);
 }
 
 void AwoxMesh::publish_availability(Device *device, bool delayed) {
@@ -476,15 +423,7 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
     return;
   }
 
-  const std::string message = device->online ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, message.c_str());
-  global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
-}
-
-void AwoxMesh::publish_availability(Group *group) {
-  const std::string message = group->online ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish online/offline for group %d - %s", group->group_id, message.c_str());
-  global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "availability"), message, 0, true);
+  this->publish_connection->publish_availability(device);
 }
 
 void AwoxMesh::sync_and_publish_group_state(Group *group) {
@@ -509,194 +448,11 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   this->publish_state(group);
 }
 
-void AwoxMesh::publish_state(Device *device) {
-  if (!device->address_set()) {
-    ESP_LOGW(TAG, "'%s': Can not yet send publish state, mac address not known...",
-             std::to_string(device->mesh_id).c_str());
-    return;
-  }
-  if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
-    global_mqtt_client->publish_json(
-        this->get_mqtt_topic_for_(device, "state"),
-        [this, device](JsonObject root) {
-          root["state"] = device->state ? "ON" : "OFF";
+void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
+  this->publish_connection->publish_state(mesh_destination);
 
-          root["color_mode"] = "color_temp";
-
-          root["brightness"] = convert_value_to_available_range(device->white_brightness, 1, 0x7f, 0, 255);
-
-          if (device->color_mode) {
-            root["color_mode"] = "rgb";
-            root["brightness"] = convert_value_to_available_range(device->color_brightness, 0xa, 0x64, 0, 255);
-          } else {
-            root["color_temp"] = convert_value_to_available_range(device->temperature, 0, 0x7f, 153, 370);
-          }
-          JsonObject color = root.createNestedObject("color");
-          color["r"] = device->R;
-          color["g"] = device->G;
-          color["b"] = device->B;
-        },
-        0, true);
-  } else {
-    global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "state"), device->state ? "ON" : "OFF",
-                                device->state ? 2 : 3, 0, true);
-  }
-
-  for (Group *group : device->get_groups()) {
+  for (Group *group : mesh_destination->get_groups()) {
     this->sync_and_publish_group_state(group);
-  }
-}
-
-void AwoxMesh::publish_state(Group *group) {
-  if (group->device_info == nullptr) {
-    ESP_LOGW(TAG, "group %d: Can not yet send publish state, device info not known...", group->group_id);
-    return;
-  }
-  if (group->device_info->has_feature(FEATURE_LIGHT_MODE)) {
-    global_mqtt_client->publish_json(
-        this->get_mqtt_topic_for_(group, "state"),
-        [this, group](JsonObject root) {
-          root["state"] = group->state ? "ON" : "OFF";
-
-          root["color_mode"] = "color_temp";
-
-          root["brightness"] = convert_value_to_available_range(group->white_brightness, 1, 0x7f, 0, 255);
-
-          if (group->color_mode) {
-            root["color_mode"] = "rgb";
-            root["brightness"] = convert_value_to_available_range(group->color_brightness, 0xa, 0x64, 0, 255);
-          } else {
-            root["color_temp"] = convert_value_to_available_range(group->temperature, 0, 0x7f, 153, 370);
-          }
-          JsonObject color = root.createNestedObject("color");
-          color["r"] = group->R;
-          color["g"] = group->G;
-          color["b"] = group->B;
-        },
-        0, true);
-  } else {
-    global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "state"), group->state ? "ON" : "OFF",
-                                group->state ? 2 : 3, 0, true);
-  }
-}
-
-void AwoxMesh::publish_connection_sensor_discovery() {
-  const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
-  const std::string sanitized_name = str_sanitize(App.get_name());
-
-  for (int i = 0; i < this->connections_.size(); i++) {
-    global_mqtt_client->publish_json(
-        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-devices/config",
-        [this, i, discovery_info](JsonObject root) {
-          // Entity
-          root[MQTT_NAME] = "Connection " + std::to_string(i) + " devices";
-          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-devices";
-          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
-          root[MQTT_ICON] = "mdi:counter";
-          root[MQTT_ENABLED_BY_DEFAULT] = false;
-
-          // State and command topic
-          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
-
-          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".devices }}";
-
-          // Device
-          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
-        },
-        0, discovery_info.retain);
-
-    global_mqtt_client->publish_json(
-        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mesh-ids/config",
-        [this, i, discovery_info](JsonObject root) {
-          // Entity
-          root[MQTT_NAME] = "Connection " + std::to_string(i) + " Mesh ID's";
-          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mesh-ids";
-          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
-          root[MQTT_ICON] = "mdi:vector-polyline";
-          root[MQTT_ENABLED_BY_DEFAULT] = false;
-
-          // State and command topic
-          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
-
-          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mesh_ids }}";
-
-          // Device
-          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
-        },
-        0, discovery_info.retain);
-
-    global_mqtt_client->publish_json(
-        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mesh-id/config",
-        [this, i, discovery_info](JsonObject root) {
-          // Entity
-          root[MQTT_NAME] = "Connection " + std::to_string(i) + " Mesh ID";
-          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mesh-id";
-          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
-          root[MQTT_ICON] = "mdi:vector-point-select";
-          root[MQTT_ENABLED_BY_DEFAULT] = false;
-
-          // State and command topic
-          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
-
-          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mesh_id }}";
-
-          // Device
-          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
-        },
-        0, discovery_info.retain);
-
-    global_mqtt_client->publish_json(
-        discovery_info.prefix + "/sensor/" + sanitized_name + "/connection-" + std::to_string(i) + "-mac/config",
-        [this, i, discovery_info](JsonObject root) {
-          // Entity
-          root[MQTT_NAME] = "Connection " + std::to_string(i) + " mac address";
-          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-mac";
-          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
-          root[MQTT_ICON] = "mdi:information";
-          root[MQTT_ENABLED_BY_DEFAULT] = false;
-
-          // State and command topic
-          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
-
-          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".mac }}";
-
-          // Device
-          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
-        },
-        0, discovery_info.retain);
-
-    global_mqtt_client->publish_json(
-        discovery_info.prefix + "/binary_sensor/" + sanitized_name + "/connection-" + std::to_string(i) +
-            "-connected/config",
-        [this, i, discovery_info](JsonObject root) {
-          // Entity
-          root[MQTT_NAME] = "Connection " + std::to_string(i) + " connected";
-          root[MQTT_UNIQUE_ID] = "awox-connection-" + std::to_string(i) + "-connected";
-          root[MQTT_ENTITY_CATEGORY] = "diagnostic";
-          root[MQTT_ICON] = "mdi:connection";
-
-          root[MQTT_AVAILABILITY_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-
-          // State and command topic
-          root[MQTT_STATE_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connection_status";
-
-          root[MQTT_PAYLOAD_ON] = true;
-          root[MQTT_PAYLOAD_OFF] = false;
-          root[MQTT_VALUE_TEMPLATE] = "{{ value_json.connection_" + std::to_string(i) + ".connected }}";
-
-          // Device
-          JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
-        },
-        0, discovery_info.retain);
   }
 }
 
@@ -708,123 +464,9 @@ void AwoxMesh::send_discovery(Device *device) {
   }
 
   device->device_info = this->device_info_resolver->get_by_product_id(device->product_id);
-
-  ESP_LOGD(TAG, "[%d]: Sending discovery productID: 0x%02X (%s - %s) mac: %s", device->mesh_id,
-           device->device_info->get_product_id(), device->device_info->get_name(), device->device_info->get_model(),
-           device->address_str().c_str());
-
-  const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   device->send_discovery = true;
 
-  global_mqtt_client->publish_json(
-      this->get_discovery_topic_(discovery_info, device),
-      [this, device, discovery_info](JsonObject root) {
-        root["schema"] = "json";
-
-        // Entity
-        root[MQTT_NAME] = nullptr;
-        root[MQTT_UNIQUE_ID] = "awox-" + device->address_str() + "-" + device->device_info->get_component_type();
-
-        if (strlen(device->device_info->get_icon()) > 0) {
-          root[MQTT_ICON] = device->device_info->get_icon();
-        }
-
-        // State and command topic
-        root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(device, "state");
-        root[MQTT_COMMAND_TOPIC] = this->get_mqtt_topic_for_(device, "command");
-
-        // Availavility topics
-        JsonArray availability = root.createNestedArray(MQTT_AVAILABILITY);
-        auto availability_topic_1 = availability.createNestedObject();
-        availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
-        auto availability_topic_2 = availability.createNestedObject();
-        availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-        auto availability_topic_3 = availability.createNestedObject();
-        availability_topic_3[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connected";
-        root[MQTT_AVAILABILITY_MODE] = "all";
-
-        // Features
-        root[MQTT_COLOR_MODE] = true;
-
-        if (device->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS) ||
-            device->device_info->has_feature(FEATURE_COLOR_BRIGHTNESS)) {
-          root["brightness"] = true;
-          root["brightness_scale"] = 255;
-        }
-
-        JsonArray color_modes = root.createNestedArray("supported_color_modes");
-
-        if (device->device_info->has_feature(FEATURE_COLOR)) {
-          color_modes.add("rgb");
-        }
-
-        if (device->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
-          color_modes.add("color_temp");
-
-          root[MQTT_MIN_MIREDS] = 153;
-          root[MQTT_MAX_MIREDS] = 370;
-        }
-
-        // brightness should always be used alone
-        // https://developers.home-assistant.io/docs/core/entity/light/#color-modes
-        if (color_modes.size() == 0 && device->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS)) {
-          color_modes.add("brightness");
-        }
-
-        if (color_modes.size() == 0) {
-          color_modes.add("onoff");
-        }
-
-        // Device
-        JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-
-        JsonArray identifiers = device_info.createNestedArray(MQTT_DEVICE_IDENTIFIERS);
-        identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
-        identifiers.add(device->address_str());
-
-        device_info[MQTT_DEVICE_NAME] = device->device_info->get_name();
-
-        if (strlen(device->device_info->get_model()) == 0) {
-          device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id()) +
-                                           " (" + std::to_string(device->mesh_id) + ")";
-        } else {
-          device_info[MQTT_DEVICE_MODEL] =
-              std::string(device->device_info->get_model()) + " (" + std::to_string(device->mesh_id) + ")";
-        }
-        device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
-        device_info["via_device"] = get_mac_address();
-        // device_info["serial_number"] = "mesh-id: " + std::to_string(device->mesh_id);
-      },
-      0, discovery_info.retain);
-
-  if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
-    global_mqtt_client->subscribe_json(
-        this->get_mqtt_topic_for_(device, "command"),
-        [this, device](const std::string &topic, JsonObject root) { this->process_incomming_command(device, root); });
-  } else {
-    global_mqtt_client->subscribe(this->get_mqtt_topic_for_(device, "command"),
-                                  [this, device](const std::string &topic, const std::string &payload) {
-                                    ESP_LOGI(TAG, "command %s - %s", topic.c_str(), payload.c_str());
-                                    auto val = parse_on_off(payload.c_str());
-                                    switch (val) {
-                                      case PARSE_ON:
-                                        device->state = true;
-                                        this->set_power(device->mesh_id, true);
-                                        break;
-                                      case PARSE_OFF:
-                                        device->state = false;
-                                        this->set_power(device->mesh_id, false);
-                                        break;
-                                      case PARSE_TOGGLE:
-                                        device->state = !device->state;
-                                        this->set_power(device->mesh_id, device->state);
-                                        break;
-                                      case PARSE_NONE:
-                                        break;
-                                    }
-                                  });
-  }
-  this->publish_availability(device, true);
+  this->publish_connection->send_discovery(device);
 }
 
 void AwoxMesh::send_group_discovery(Group *group) {
@@ -834,264 +476,14 @@ void AwoxMesh::send_group_discovery(Group *group) {
     return;
   }
 
-  const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
   group->send_discovery = true;
 
-  global_mqtt_client->publish_json(
-      discovery_info.prefix + "/" + group->device_info->get_component_type() + "/group-" +
-          std::to_string(group->group_id) + "/config",
-      [this, group, discovery_info](JsonObject root) {
-        root["schema"] = "json";
-        // Entity
-        root[MQTT_NAME] = nullptr;
-        root[MQTT_UNIQUE_ID] = "group-" + std::to_string(group->group_id);
-
-        root[MQTT_ICON] = "mdi:lightbulb-group";
-
-        // State and command topic
-        root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(group, "state");
-        root[MQTT_COMMAND_TOPIC] = this->get_mqtt_topic_for_(group, "command");
-
-        // Availavility topics
-        JsonArray availability = root.createNestedArray(MQTT_AVAILABILITY);
-        auto availability_topic_1 = availability.createNestedObject();
-        availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(group, "availability");
-        auto availability_topic_2 = availability.createNestedObject();
-        availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
-        auto availability_topic_3 = availability.createNestedObject();
-        availability_topic_3[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connected";
-        root[MQTT_AVAILABILITY_MODE] = "all";
-
-        // Features
-        root[MQTT_COLOR_MODE] = true;
-
-        if (group->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS) ||
-            group->device_info->has_feature(FEATURE_COLOR_BRIGHTNESS)) {
-          root["brightness"] = true;
-          root["brightness_scale"] = 255;
-        }
-
-        JsonArray color_modes = root.createNestedArray("supported_color_modes");
-
-        if (group->device_info->has_feature(FEATURE_COLOR)) {
-          color_modes.add("rgb");
-        }
-
-        if (group->device_info->has_feature(FEATURE_WHITE_TEMPERATURE)) {
-          color_modes.add("color_temp");
-
-          root[MQTT_MIN_MIREDS] = 153;
-          root[MQTT_MAX_MIREDS] = 370;
-        }
-
-        // brightness should always be used alone
-        // https://developers.home-assistant.io/docs/core/entity/light/#color-modes
-        if (color_modes.size() == 0 && group->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS)) {
-          color_modes.add("brightness");
-        }
-
-        if (color_modes.size() == 0) {
-          color_modes.add("onoff");
-        }
-
-        // Device
-        JsonObject device_info = root.createNestedObject(MQTT_DEVICE);
-
-        JsonArray identifiers = device_info.createNestedArray(MQTT_DEVICE_IDENTIFIERS);
-        identifiers.add("esp-awox-mesh-group-" + std::to_string(group->group_id));
-
-        device_info[MQTT_DEVICE_MODEL] = "Group - " + std::to_string(group->group_id);
-        device_info[MQTT_DEVICE_MANUFACTURER] = "ESPHome AwoX BLE mesh";
-
-        device_info[MQTT_DEVICE_NAME] = "Group " + std::to_string(group->group_id);
-
-        device_info["via_device"] = get_mac_address();
-        // device_info["serial_number"] = "group-id: " + std::to_string(group->group_id);
-      },
-      0, discovery_info.retain);
-
-  if (group->device_info->has_feature(FEATURE_LIGHT_MODE)) {
-    global_mqtt_client->subscribe_json(
-        this->get_mqtt_topic_for_(group, "command"),
-        [this, group](const std::string &topic, JsonObject root) { this->process_incomming_command(group, root); });
-  } else {
-    ESP_LOGE(TAG, "Non light group isn't supported currently");
-  }
-  this->publish_availability(group);
-}
-
-void AwoxMesh::process_incomming_command(Device *device, JsonObject root) {
-  ESP_LOGV(TAG, "[%d] Process command", device->mesh_id);
-  bool state_set = false;
-  if (root.containsKey("color")) {
-    JsonObject color = root["color"];
-
-    state_set = true;
-    device->state = true;
-    device->R = (int) color["r"];
-    device->G = (int) color["g"];
-    device->B = (int) color["b"];
-
-    ESP_LOGD(TAG, "[%d] Process command color %d %d %d", device->mesh_id, (int) color["r"], (int) color["g"],
-             (int) color["b"]);
-
-    this->set_color(device->mesh_id, (int) color["r"], (int) color["g"], (int) color["b"]);
-  }
-
-  if (root.containsKey("brightness") && !root.containsKey("color_temp") &&
-      (root.containsKey("color") || device->color_mode)) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 0xa, 0x64);
-
-    state_set = true;
-    device->state = true;
-    device->color_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process command color_brightness %d", device->mesh_id, (int) root["brightness"]);
-    this->set_color_brightness(device->mesh_id, brightness);
-
-  } else if (root.containsKey("brightness")) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 1, 0x7f);
-
-    state_set = true;
-    device->state = true;
-    device->white_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process command white_brightness %d", device->mesh_id, (int) root["brightness"]);
-    this->set_white_brightness(device->mesh_id, brightness);
-  }
-
-  if (root.containsKey("color_temp")) {
-    int temperature = convert_value_to_available_range((int) root["color_temp"], 153, 370, 0, 0x7f);
-
-    state_set = true;
-    device->state = true;
-    device->temperature = temperature;
-
-    ESP_LOGD(TAG, "[%d] Process command color_temp %d", device->mesh_id, (int) root["color_temp"]);
-    this->set_white_temperature(device->mesh_id, temperature);
-  }
-
-  if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "[%d] Process command state", device->mesh_id);
-    auto val = parse_on_off(root["state"]);
-    switch (val) {
-      case PARSE_ON:
-        device->state = true;
-        if (!state_set) {
-          this->set_power(device->mesh_id, true);
-        }
-        break;
-      case PARSE_OFF:
-        device->state = false;
-        this->set_power(device->mesh_id, false);
-        break;
-      case PARSE_TOGGLE:
-        device->state = !device->state;
-        this->set_power(device->mesh_id, device->state);
-        break;
-      case PARSE_NONE:
-        break;
-    }
-  }
-
-  this->publish_state(device);
-}
-
-void AwoxMesh::process_incomming_command(Group *group, JsonObject root) {
-  ESP_LOGD(TAG, "[%d] Process command group", group->group_id);
-  int dest = group->group_id + 0x8000;
-  bool state_set = false;
-  if (root.containsKey("color")) {
-    JsonObject color = root["color"];
-
-    state_set = true;
-    group->state = true;
-    group->R = (int) color["r"];
-    group->G = (int) color["g"];
-    group->B = (int) color["b"];
-
-    ESP_LOGD(TAG, "[%d] Process group command color %d %d %d", group->group_id, (int) color["r"], (int) color["g"],
-             (int) color["b"]);
-
-    this->set_color(dest, (int) color["r"], (int) color["g"], (int) color["b"]);
-  }
-
-  if (root.containsKey("brightness") && !root.containsKey("color_temp") &&
-      (root.containsKey("color") || group->color_mode)) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 0xa, 0x64);
-
-    state_set = true;
-    group->state = true;
-    group->color_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process group command color_brightness %d", dest, (int) root["brightness"]);
-    this->set_color_brightness(dest, brightness);
-
-  } else if (root.containsKey("brightness")) {
-    int brightness = convert_value_to_available_range((int) root["brightness"], 0, 255, 1, 0x7f);
-
-    state_set = true;
-    group->state = true;
-    group->white_brightness = brightness;
-
-    ESP_LOGD(TAG, "[%d] Process group command white_brightness %d", dest, (int) root["brightness"]);
-    this->set_white_brightness(dest, brightness);
-  }
-
-  if (root.containsKey("color_temp")) {
-    int temperature = convert_value_to_available_range((int) root["color_temp"], 153, 370, 0, 0x7f);
-
-    state_set = true;
-    group->state = true;
-    group->temperature = temperature;
-
-    ESP_LOGD(TAG, "[%d] Process group command color_temp %d", dest, (int) root["color_temp"]);
-    this->set_white_temperature(dest, temperature);
-  }
-
-  if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "[%d] Process group command state", dest);
-    auto val = parse_on_off(root["state"]);
-    switch (val) {
-      case PARSE_ON:
-        group->state = true;
-        if (!state_set) {
-          this->set_power(dest, true);
-        }
-        break;
-      case PARSE_OFF:
-        group->state = false;
-        this->set_power(dest, false);
-        break;
-      case PARSE_TOGGLE:
-        group->state = !group->state;
-        this->set_power(dest, group->state);
-        break;
-      case PARSE_NONE:
-        break;
-    }
-  }
-
-  this->publish_state(group);
-}
-
-std::string AwoxMesh::get_discovery_topic_(const MQTTDiscoveryInfo &discovery_info, Device *device) const {
-  return discovery_info.prefix + "/" + device->device_info->get_component_type() + "/awox-" +
-         device->address_str_hex_only() + "/config";
-}
-
-std::string AwoxMesh::get_mqtt_topic_for_(Device *device, const std::string &suffix) const {
-  return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(device->mesh_id) + "/" + suffix;
-}
-
-std::string AwoxMesh::get_mqtt_topic_for_(Group *group, const std::string &suffix) const {
-  return global_mqtt_client->get_topic_prefix() + "/group-" + std::to_string(group->group_id) + "/" + suffix;
+  this->publish_connection->send_group_discovery(group);
 }
 
 void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &&callback) {
   ESP_LOGD(TAG, "Call connection for %d", dest);
   for (auto *connection : this->connections_) {
-    // todo: when supporting groups dest doesn't have to be a linked mesh_id
     if (connection->get_address() > 0 && connection->mesh_id_linked(dest)) {
       ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
       callback(connection);
@@ -1101,7 +493,7 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
     }
   }
 
-  ESP_LOGI(TAG, "No active connection for %d, we trigger message on all", dest);
+  ESP_LOGI(TAG, "No active connection for %d, we trigger message on all could be also a group", dest);
   for (auto *connection : this->connections_) {
     if (connection->connected()) {
       callback(connection);
@@ -1140,6 +532,24 @@ void AwoxMesh::set_white_brightness(int dest, int brightness) {
 void AwoxMesh::set_white_temperature(int dest, int temp) {
   this->call_connection(dest,
                         [dest, temp](MeshConnection *connection) { connection->set_white_temperature(dest, temp); });
+}
+
+void AwoxMesh::set_sequence(int dest, int preset) {
+  this->call_connection(dest, [dest, preset](MeshConnection *connection) { connection->set_sequence(dest, preset); });
+}
+
+void AwoxMesh::set_candle_mode(int dest) {
+  this->call_connection(dest, [dest](MeshConnection *connection) { connection->set_candle_mode(dest); });
+}
+
+void AwoxMesh::set_sequence_fade_duration(int dest, int duration) {
+  this->call_connection(
+      dest, [dest, duration](MeshConnection *connection) { connection->set_sequence_fade_duration(dest, duration); });
+}
+
+void AwoxMesh::set_sequence_color_duration(int dest, int duration) {
+  this->call_connection(
+      dest, [dest, duration](MeshConnection *connection) { connection->set_sequence_color_duration(dest, duration); });
 }
 
 void AwoxMesh::request_status_update(int dest) {
