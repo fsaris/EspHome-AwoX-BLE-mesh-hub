@@ -1,153 +1,157 @@
 <!DOCTYPE html>
 <html>
-  <style>
-    .row {
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      max-width: 800px
-    }
+<style>
+  .row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-width: 800px
+  }
 
-    .column {
-      display: flex;
-      flex-direction: column;
-      flex-basis: 100%;
-      flex: 1;
-    }
-    .note {
-      font-style: italic;
-      font-size: small;
-    }
-  </style>
-  <script>
-    const headers = {
-      'x-parse-application-id': '55O69FLtoxPt67LLwaHGpHmVWndhZGn9Wty8PLrJ',
-      'x-parse-installation-id': crypto.randomUUID(),
-      'x-parse-client-key': 'PyR3yV65rytEicteNlQHSVNpAGvCByOrsLiEqJtI',
-      'content-type': 'application/json'
-    };
+  .column {
+    display: flex;
+    flex-direction: column;
+    flex-basis: 100%;
+    flex: 1;
+  }
 
-    async function getSession(url, username, password) {
+  .note {
+    font-style: italic;
+    font-size: small;
+  }
+</style>
+<script>
+  const headers = {
+    'x-parse-application-id': '55O69FLtoxPt67LLwaHGpHmVWndhZGn9Wty8PLrJ',
+    'x-parse-installation-id': crypto.randomUUID(),
+    'x-parse-client-key': 'PyR3yV65rytEicteNlQHSVNpAGvCByOrsLiEqJtI',
+    'content-type': 'application/json'
+  };
 
-      const response = await fetch(url + '/parse/login', {
-        method: "POST",
-        body: JSON.stringify({
-          "username": username,
-          "password": password,
-          "_method": "GET"
-        }),
-        headers: headers
-      });
-      return response.json();
-    }
+  async function getSession(url, username, password) {
 
-    async function getMeshCredentials(url, sessionToken, objectId) {
-      const response = await fetch(url + '/parse/classes/Credential', {
-        method: "POST",
-        body: JSON.stringify({
-          "where": {
-            "owner": {
-              "__type": "Pointer",
-              "className": "_User",
-              "objectId": objectId,
-            }
-          },
-          "_method": "GET"
-        }),
-        headers: {
-          ...headers,
-          'x-parse-session-token': sessionToken
-        }
-      });
-      return response.json();
-    }
+    const response = await fetch(url + '/parse/login', {
+      method: "POST",
+      body: JSON.stringify({
+        "username": username,
+        "password": password,
+        "_method": "GET"
+      }),
+      headers: headers
+    });
+    return response.json();
+  }
 
-    async function post(e, form, url) {
-      e.preventDefault();
-      const element = document.getElementById('response');
-      element.innerText = 'Logging in...';
-      const data = new FormData(e.target);
-
-      const session = await getSession(url, data.get('user'), data.get('pass'));
-
-      if (session.error) {
-        element.innerText = session.error;
-        return;
+  async function getMeshCredentials(url, sessionToken, objectId) {
+    const response = await fetch(url + '/parse/classes/Credential', {
+      method: "POST",
+      body: JSON.stringify({
+        "where": {
+          "owner": {
+            "__type": "Pointer",
+            "className": "_User",
+            "objectId": objectId,
+          }
+        },
+        "_method": "GET"
+      }),
+      headers: {
+        ...headers,
+        'x-parse-session-token': sessionToken
       }
+    });
+    return response.json();
+  }
 
-      element.innerText = 'Fetching mesh credentials...';
+  async function post(e, form, url) {
+    e.preventDefault();
+    const element = document.getElementById('response');
+    element.innerText = 'Logging in...';
+    const data = new FormData(e.target);
 
-      const response = await getMeshCredentials(url, session.sessionToken, session.objectId);
+    const session = await getSession(url, data.get('user'), data.get('pass'));
 
-      if (response.error) {
-        element.innerText = response.error;
-        return;
-      }
+    if (session.error) {
+      element.innerText = session.error;
+      return;
+    }
 
-      const credentials = response.results[0];
+    element.innerText = 'Fetching mesh credentials...';
 
-      element.innerHTML = '<pre>' + JSON.stringify({
+    const response = await getMeshCredentials(url, session.sessionToken, session.objectId);
+
+    if (response.error) {
+      element.innerText = response.error;
+      return;
+    }
+
+    let content = '';
+    response.results.forEach((credentials) => {
+      content += JSON.stringify({
         'mesh_name': credentials.client_id,
         'mesh_password': credentials.access_token,
-        //  'mesh key': credentials.refresh_token,
-      }) + '</pre>';
+        'service': credentials.service,
+      }) + "\n";
+    });
+
+    element.innerHTML = '<pre>' + content + '</pre>';
 
 
-    }
+  }
 
-  </script>
+</script>
 
-  <body>
+<body>
 
-    <h1>
-      Get your Mesh credentials from the AwoX cloud
-    </h1>
-    <p class="note">
-      The credentials are directly posted to the AwoX servers and only known in this browser.
-    </p>
+  <h1>
+    Get your Mesh credentials from the AwoX cloud
+  </h1>
+  <p class="note">
+    The credentials are directly posted to the AwoX servers and only known in this browser.
+  </p>
 
-    <div class="row">
-
-
-      <div class="column">
-
-        <p><strong>Using AwoX Smart CONTROL</strong></p>
-
-        <form onsubmit="post(event, this, 'https://l4hparse-prod.awox.cloud')">
-          <div>
-            Username: <input type="text" name="user">
-          </div>
-          <div>
-            Password: <input type="password" name="pass">
-          </div>
-
-          <input type="submit" value="Submit">
-        </form>
-      </div>
+  <div class="row">
 
 
-      <div class="column">
+    <div class="column">
 
-        <p><strong>Using AwoX HomeControl</strong></p>
+      <p><strong>Using AwoX Smart CONTROL</strong></p>
 
-        <form onsubmit="post(event, this, 'https://l4hparse-hc-prod.awox.cloud')">
-          <div>
-            Username: <input type="text" name="user">
-          </div>
-          <div>
-            Password: <input type="password" name="pass">
-          </div>
+      <form onsubmit="post(event, this, 'https://l4hparse-prod.awox.cloud')">
+        <div>
+          Username: <input type="text" name="user">
+        </div>
+        <div>
+          Password: <input type="password" name="pass">
+        </div>
 
-          <input type="submit" value="Submit">
-        </form>
-      </div>
+        <input type="submit" value="Submit">
+      </form>
     </div>
 
-    <pre id="response">
+
+    <div class="column">
+
+      <p><strong>Using AwoX HomeControl</strong></p>
+
+      <form onsubmit="post(event, this, 'https://l4hparse-hc-prod.awox.cloud')">
+        <div>
+          Username: <input type="text" name="user">
+        </div>
+        <div>
+          Password: <input type="password" name="pass">
+        </div>
+
+        <input type="submit" value="Submit">
+      </form>
+    </div>
+  </div>
+
+  <pre id="response">
 
     </pre>
-    <p class="note">When multiple services are shown look for 'service: "mesh"'</p>
+  <p class="note">When multiple services are shown look for 'service: "mesh"'</p>
 
-  </body>
+</body>
 
 </html>
