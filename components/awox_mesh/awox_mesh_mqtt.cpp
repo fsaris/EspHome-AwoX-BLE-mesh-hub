@@ -117,12 +117,6 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
         [this, mesh_destination](JsonObject root) {
           root["state"] = mesh_destination->state ? "ON" : "OFF";
 
-          if (mesh_destination->candle_mode) {
-            root["effect"] = "candle";
-          } else if (mesh_destination->sequence_mode) {
-            root["effect"] = "color loop";
-          }
-
           if (mesh_destination->color_mode) {
             root["color_mode"] = "rgb";
             root["brightness"] =
@@ -136,6 +130,12 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
             }
             root["brightness"] = convert_value_to_available_range(mesh_destination->white_brightness, 1, 0x7f, 0, 255);
           }
+
+          // https://developers.home-assistant.io/docs/core/entity/light#color-mode-when-rendering-effects
+          if (mesh_destination->candle_mode || mesh_destination->sequence_mode) {
+            root["color_mode"] = "brightness";
+          }
+
           JsonObject color = root.createNestedObject("color");
           color["r"] = mesh_destination->R;
           color["g"] = mesh_destination->G;
