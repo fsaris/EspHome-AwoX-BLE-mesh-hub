@@ -2,7 +2,7 @@
 
 A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
 
-For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml).
+For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml). For a full getting started see [#71](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/discussions/71).
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
