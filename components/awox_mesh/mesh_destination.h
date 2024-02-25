@@ -8,6 +8,10 @@ namespace awox_mesh {
 
 class Group;
 
+struct MeshDestinationState {
+  char state[7];
+};
+
 class MeshDestination {
  public:
   bool state = false;
@@ -29,6 +33,29 @@ class MeshDestination {
   virtual const char *type() const;
   virtual bool can_publish_state();
   virtual std::vector<Group *> get_groups() const;
+
+  const MeshDestinationState state_as_char() {
+    MeshDestinationState state = {};
+
+    state.state[0] = 0;
+    if (this->state)
+      state.state[0] += 1;
+    if (this->color_mode)
+      state.state[0] += 2;
+    if (this->sequence_mode)
+      state.state[0] += 4;
+    if (this->candle_mode)
+      state.state[0] += 8;
+
+    state.state[1] = (char) this->white_brightness;
+    state.state[2] = (char) this->temperature;
+    state.state[3] = (char) this->color_brightness;
+    state.state[4] = (char) this->R;
+    state.state[5] = (char) this->G;
+    state.state[6] = (char) this->B;
+
+    return state;
+  };
 };
 
 }  // namespace awox_mesh

@@ -95,12 +95,24 @@ void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devi
 }
 
 void AwoxMeshMqtt::publish_availability(Device *device) {
+  if (this->last_published_availability_.count(device->dest()) &&
+      this->last_published_availability_[device->dest()] == device->online) {
+    return;
+  }
+  this->last_published_availability_[device->dest()] = device->online;
+
   const std::string message = device->online ? "online" : "offline";
   ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
 void AwoxMeshMqtt::publish_availability(Group *group) {
+  if (this->last_published_availability_.count(group->dest()) &&
+      this->last_published_availability_[group->dest()] == group->online) {
+    return;
+  }
+  this->last_published_availability_[group->dest()] = group->online;
+
   const std::string message = group->online ? "online" : "offline";
   ESP_LOGI(TAG, "Publish online/offline for group %d - %s", group->group_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "availability"), message, 0, true);
@@ -111,6 +123,15 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
     ESP_LOGW(TAG, "[%d] Can not yet send publish state for %s", mesh_destination->dest(), mesh_destination->type());
     return;
   }
+
+  if (this->last_published_state_.count(mesh_destination->dest()) &&
+      strcmp(this->last_published_state_[mesh_destination->dest()].state, mesh_destination->state_as_char().state) ==
+          0) {
+    ESP_LOGV(TAG, "[%d] No need to update state is equal to last publication for %s", mesh_destination->dest(),
+             mesh_destination->type());
+    return;
+  }
+
   if (mesh_destination->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->publish_json(
         this->get_mqtt_topic_for_(mesh_destination, "state"),
@@ -146,6 +167,8 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
           color["r"] = mesh_destination->R;
           color["g"] = mesh_destination->G;
           color["b"] = mesh_destination->B;
+
+          this->last_published_state_[mesh_destination->dest()] = mesh_destination->state_as_char();
         },
         0, true);
   } else {

@@ -2,6 +2,7 @@
 
 #ifdef USE_ESP32
 
+#include <map>
 #include <vector>
 
 #include "mesh_destination.h"
@@ -18,6 +19,9 @@ class AwoxMeshMqtt {
   AwoxMesh *mesh_;
 
   bool published_connected = false;
+
+  std::map<int, MeshDestinationState> last_published_state_;
+  std::map<int, bool> last_published_availability_;
 
   std::string get_mqtt_topic_for_(MeshDestination *mesh_destination, const std::string &suffix) const;
 
