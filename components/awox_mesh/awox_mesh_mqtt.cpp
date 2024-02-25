@@ -58,7 +58,7 @@ std::string AwoxMeshMqtt::get_mqtt_topic_for_(MeshDestination *mesh_destination,
   }
 }
 
-void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devices,
+void AwoxMeshMqtt::publish_connected(int active_connections, int online_devices,
                                      const std::vector<MeshConnection *> &connections) {
   if (!this->published_connected) {
     // todo.... find proper solution
@@ -67,15 +67,19 @@ void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devi
     this->published_connected = true;
   }
 
-  const std::string message = has_active_connection ? "online" : "offline";
+  if (this->last_published_active_connections_ == active_connections &&
+      this->last_published_online_devices_ == online_devices) {
+    return;
+  }
+
+  const std::string message = active_connections > 0 ? "online" : "offline";
   ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
   global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
 
   global_mqtt_client->publish_json(
       global_mqtt_client->get_topic_prefix() + "/connection_status",
       [&](JsonObject root) {
-        root["now"] = esphome::millis();
-        root["active_connections"] = has_active_connection;
+        root["active_connections"] = active_connections;
         root["online_devices"] = online_devices;
 
         for (int i = 0; i < connections.size(); i++) {

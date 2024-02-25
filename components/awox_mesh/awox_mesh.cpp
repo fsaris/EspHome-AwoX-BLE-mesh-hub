@@ -405,7 +405,7 @@ void AwoxMesh::publish_connected() {
   linked_mesh_ids.erase(unique(linked_mesh_ids.begin(), linked_mesh_ids.end()), linked_mesh_ids.end());
   online_devices = linked_mesh_ids.size();
 
-  this->publish_connection->publish_connected(this->has_active_connection, online_devices, this->connections_);
+  this->publish_connection->publish_connected(active_connections, online_devices, this->connections_);
 }
 
 void AwoxMesh::publish_availability(Device *device, bool delayed) {
