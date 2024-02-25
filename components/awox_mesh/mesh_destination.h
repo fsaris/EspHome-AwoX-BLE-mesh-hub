@@ -9,7 +9,7 @@ namespace awox_mesh {
 class Group;
 
 struct MeshDestinationState {
-  char state[7];
+  unsigned char state[7];
 };
 
 class MeshDestination {
@@ -47,12 +47,12 @@ class MeshDestination {
     if (this->candle_mode)
       state.state[0] += 8;
 
-    state.state[1] = (char) this->white_brightness;
-    state.state[2] = (char) this->temperature;
-    state.state[3] = (char) this->color_brightness;
-    state.state[4] = (char) this->R;
-    state.state[5] = (char) this->G;
-    state.state[6] = (char) this->B;
+    state.state[1] = this->white_brightness;
+    state.state[2] = this->temperature;
+    state.state[3] = this->color_brightness;
+    state.state[4] = this->R;
+    state.state[5] = this->G;
+    state.state[6] = this->B;
 
     return state;
   };

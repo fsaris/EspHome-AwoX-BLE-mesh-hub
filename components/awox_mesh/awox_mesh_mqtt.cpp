@@ -125,12 +125,14 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
   }
 
   if (this->last_published_state_.count(mesh_destination->dest()) &&
-      strcmp(this->last_published_state_[mesh_destination->dest()].state, mesh_destination->state_as_char().state) ==
+      memcmp(this->last_published_state_[mesh_destination->dest()].state, mesh_destination->state_as_char().state, 7) ==
           0) {
     ESP_LOGV(TAG, "[%d] No need to update state is equal to last publication for %s", mesh_destination->dest(),
              mesh_destination->type());
     return;
   }
+
+  this->last_published_state_[mesh_destination->dest()] = mesh_destination->state_as_char();
 
   if (mesh_destination->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->publish_json(
@@ -167,8 +169,6 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
           color["r"] = mesh_destination->R;
           color["g"] = mesh_destination->G;
           color["b"] = mesh_destination->B;
-
-          this->last_published_state_[mesh_destination->dest()] = mesh_destination->state_as_char();
         },
         0, true);
   } else {
