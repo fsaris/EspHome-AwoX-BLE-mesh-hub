@@ -58,7 +58,7 @@ std::string AwoxMeshMqtt::get_mqtt_topic_for_(MeshDestination *mesh_destination,
   }
 }
 
-void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devices,
+void AwoxMeshMqtt::publish_connected(int active_connections, int online_devices,
                                      const std::vector<MeshConnection *> &connections) {
   if (!this->published_connected) {
     // todo.... find proper solution
@@ -67,15 +67,19 @@ void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devi
     this->published_connected = true;
   }
 
-  const std::string message = has_active_connection ? "online" : "offline";
+  if (this->last_published_active_connections_ == active_connections &&
+      this->last_published_online_devices_ == online_devices) {
+    return;
+  }
+
+  const std::string message = active_connections > 0 ? "online" : "offline";
   ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
   global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
 
   global_mqtt_client->publish_json(
       global_mqtt_client->get_topic_prefix() + "/connection_status",
       [&](JsonObject root) {
-        root["now"] = esphome::millis();
-        root["active_connections"] = has_active_connection;
+        root["active_connections"] = active_connections;
         root["online_devices"] = online_devices;
 
         for (int i = 0; i < connections.size(); i++) {
@@ -95,12 +99,24 @@ void AwoxMeshMqtt::publish_connected(bool has_active_connection, int online_devi
 }
 
 void AwoxMeshMqtt::publish_availability(Device *device) {
+  if (this->last_published_availability_.count(device->dest()) &&
+      this->last_published_availability_[device->dest()] == device->online) {
+    return;
+  }
+  this->last_published_availability_[device->dest()] = device->online;
+
   const std::string message = device->online ? "online" : "offline";
   ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
 void AwoxMeshMqtt::publish_availability(Group *group) {
+  if (this->last_published_availability_.count(group->dest()) &&
+      this->last_published_availability_[group->dest()] == group->online) {
+    return;
+  }
+  this->last_published_availability_[group->dest()] = group->online;
+
   const std::string message = group->online ? "online" : "offline";
   ESP_LOGI(TAG, "Publish online/offline for group %d - %s", group->group_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "availability"), message, 0, true);
@@ -111,6 +127,17 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
     ESP_LOGW(TAG, "[%d] Can not yet send publish state for %s", mesh_destination->dest(), mesh_destination->type());
     return;
   }
+
+  if (this->last_published_state_.count(mesh_destination->dest()) &&
+      memcmp(this->last_published_state_[mesh_destination->dest()].state, mesh_destination->state_as_char().state, 7) ==
+          0) {
+    ESP_LOGV(TAG, "[%d] No need to update state is equal to last publication for %s", mesh_destination->dest(),
+             mesh_destination->type());
+    return;
+  }
+
+  this->last_published_state_[mesh_destination->dest()] = mesh_destination->state_as_char();
+
   if (mesh_destination->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->publish_json(
         this->get_mqtt_topic_for_(mesh_destination, "state"),
@@ -129,6 +156,12 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
               root["color_mode"] = "brightness";
             }
             root["brightness"] = convert_value_to_available_range(mesh_destination->white_brightness, 1, 0x7f, 0, 255);
+          }
+
+          if (mesh_destination->candle_mode) {
+            root["effect"] = "candle";
+          } else if (mesh_destination->sequence_mode) {
+            root["effect"] = "color loop";
           }
 
           // https://developers.home-assistant.io/docs/core/entity/light#color-mode-when-rendering-effects
