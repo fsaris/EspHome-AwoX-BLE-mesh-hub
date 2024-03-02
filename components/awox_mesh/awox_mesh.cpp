@@ -433,6 +433,9 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   bool state = false;
 
   for (Device *device : group->get_devices()) {
+    if (group->device_info == nullptr && device->device_info != nullptr) {
+      group->device_info = device->device_info;
+    }
     if (device->online) {
       online = true;
     }
