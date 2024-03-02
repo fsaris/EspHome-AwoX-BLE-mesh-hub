@@ -39,10 +39,12 @@ void AwoxMesh::register_connection(MeshConnection *connection) {
   connection->mesh_password = this->mesh_password;
   connection->mesh_ = this;
 
-  connection->set_disconnect_callback([this]() {
+  connection->set_disconnect_callback([this, connection]() {
     ESP_LOGI(TAG, "disconnected");
 
     this->publish_connected();
+
+    connection->set_state(esp32_ble_tracker::ClientState::IDLE);
   });
 }
 
