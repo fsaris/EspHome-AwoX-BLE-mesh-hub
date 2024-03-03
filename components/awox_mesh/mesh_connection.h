@@ -62,6 +62,7 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
    */
   int packet_count = 1;
   uint32_t last_send_command = 0;
+  uint32_t command_debounce_time = 180;
 
   std::deque<QueuedCommand> command_queue{};
 

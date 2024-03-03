@@ -101,14 +101,24 @@ void MeshConnection::set_address(uint64_t address) {
 void MeshConnection::loop() {
   esp32_ble_client::BLEClientBase::loop();
 
-  if (this->connected() && !this->command_queue.empty() && this->last_send_command < esphome::millis() - 180) {
+  if (this->connected() && !this->command_queue.empty() &&
+      this->last_send_command < esphome::millis() - this->command_debounce_time) {
     ESP_LOGV(TAG, "Send command, time since last command: %d", esphome::millis() - this->last_send_command);
     this->last_send_command = esphome::millis();
     QueuedCommand item = this->command_queue.front();
     ESP_LOGV(TAG, "Send command %d, for dest: %d", item.command, item.dest);
     this->command_queue.pop_front();
-    ESP_LOGV(TAG, "remove item from queue");
+    ESP_LOGV(TAG, "Remove item from queue");
     this->write_command(item.command, item.data, item.dest, false);
+
+    if (!this->command_queue.empty()) {
+      ESP_LOGI(TAG, "still %d queued commands", this->command_queue.size());
+    }
+  } else if (!this->command_queue.empty()) {
+    QueuedCommand item = this->command_queue.front();
+    ESP_LOGI(TAG, "%d queued commands (debounce timer: %d, next command %02X, for dest: %d)",
+             this->command_queue.size(), esphome::millis() - this->last_send_command - this->command_debounce_time,
+             item.command, item.dest);
   }
 }
 
