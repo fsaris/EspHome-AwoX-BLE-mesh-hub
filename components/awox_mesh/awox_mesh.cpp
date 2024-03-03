@@ -417,9 +417,6 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
     this->delayed_availability_publish.push_back(publish);
     ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
 
-    // Force info update request
-    this->request_status_update(device->mesh_id);
-
     return;
   }
 
