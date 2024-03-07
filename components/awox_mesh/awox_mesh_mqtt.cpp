@@ -67,14 +67,22 @@ void AwoxMeshMqtt::publish_connected(int active_connections, int online_devices,
     this->published_connected = true;
   }
 
+  if ((this->last_published_online_devices_ > 0) != (online_devices > 0)) {
+    const std::string message = active_connections > 0 ? "online" : "offline";
+    ESP_LOGI(TAG, "Publish mesh connection status: %s", message.c_str());
+
+    global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
+  }
+
   if (this->last_published_active_connections_ == active_connections &&
       this->last_published_online_devices_ == online_devices) {
     return;
   }
 
-  const std::string message = active_connections > 0 ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish connected to mesh device - %s", message.c_str());
-  global_mqtt_client->publish(global_mqtt_client->get_topic_prefix() + "/connected", message, 0, true);
+  ESP_LOGI(TAG, "Publish connection info, %d connections, %d device online", active_connections, online_devices);
+
+  this->last_published_online_devices_ = online_devices;
+  this->last_published_active_connections_ = active_connections;
 
   global_mqtt_client->publish_json(
       global_mqtt_client->get_topic_prefix() + "/connection_status",
@@ -533,7 +541,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
   int dest = mesh_destination->dest();
   bool state_set = false;
 
-  ESP_LOGD(TAG, "[%d] Process command %s", dest, mesh_destination->type());
+  ESP_LOGI(TAG, "[%d] Process command %s", dest, mesh_destination->type());
 
   if (root.containsKey("fade_duration")) {
     ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", dest, (int) root["fade_duration"]);
