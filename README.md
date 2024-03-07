@@ -741,7 +741,7 @@ When 1 light in a group is `on` the group will be shown as `on`. If 1 light in t
 
 ### YAML options
 
-For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml).
+For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml). For a full getting started see [#71](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/discussions/71).
 
 The available `awox_mesh:` config options:
 
@@ -849,7 +849,7 @@ In case of using a WLAN with hidden SSID, mind to use the multiple netowrk optio
 
 ### Requirements
 - ESP32 module
-- ESPHome 2023.8.1 or newer
+- ESPHome 2024.2.0 or newer
 - MQTT broker
 
 ### Recomendations
