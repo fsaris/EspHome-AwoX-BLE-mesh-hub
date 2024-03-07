@@ -84,7 +84,7 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
 
   add_to_found_devices(device);
 
-  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
+  ESP_LOGD(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
            device.address_str().c_str(), device.get_rssi(), this->found_devices_.size());
 
   return true;
@@ -139,17 +139,6 @@ void AwoxMesh::loop() {
         ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str().c_str(), found_device->rssi);
 
         connection->connect_to(found_device);
-
-        this->set_timeout("connecting", 20000, [this, found_device, connection]() {
-          if (connection->connected()) {
-            return;
-          }
-          ESP_LOGI(TAG, "Failed to connect %s => rssi: %d", found_device->device.address_str().c_str(),
-                   found_device->rssi);
-          this->set_rssi_for_devices_that_are_not_available();
-          connection->disconnect();
-          connection->set_address(0);
-        });
 
         // max 1 new connection per loop()
         break;
@@ -417,9 +406,6 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
     this->delayed_availability_publish.push_back(publish);
     ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
 
-    // Force info update request
-    this->request_status_update(device->mesh_id);
-
     return;
   }
 
@@ -431,6 +417,9 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   bool state = false;
 
   for (Device *device : group->get_devices()) {
+    if (group->device_info == nullptr && device->device_info != nullptr) {
+      group->device_info = device->device_info;
+    }
     if (device->online) {
       online = true;
     }

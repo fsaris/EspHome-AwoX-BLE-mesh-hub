@@ -79,7 +79,7 @@ awox_mesh:
   #   - 23456
   #   - 6758
 
-  # You can give a list of mac_addresses that are allowed to connect to (to exclude some devices that are often ofline or for the allowed_mesh_ids option)
+  # You can give a list of mac_addresses that are allowed to connect to (to exclude some devices that are often offline or for the allowed_mesh_ids option)
 
   # allowed_mac_addresses:
   #   - A4:C1:38:8A:BA:11

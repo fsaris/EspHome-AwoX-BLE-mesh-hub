@@ -2,8 +2,6 @@
 
 A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
 
-For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml). For a full getting started see [#71](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/discussions/71).
-
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
 ### Devices
@@ -12,9 +10,7 @@ When setup the component will scan for AwoX BLE mesh devices and publish [discov
 
 Each device type/product can be configured by `product_id` so it gets the correct features in HomeAssistant.
 
-Unknown devices will be recognized as a dimmable light.
-
-The `product id` needed for the configuration is shown in model string of the mqtt discovery message/HomeAssistant device info.
+The `product id` needed for the configuration is shown in model string of the mqtt discovery message/HomeAssistant device info. [See yaml options](#device_info)
 
 <details>
   <summary>Config examples known devices</summary>
@@ -743,6 +739,128 @@ When using HomeAssistant the groups will show up as a device under the MQTT inte
 
 When 1 light in a group is `on` the group will be shown as `on`. If 1 light in the group is `online` the group will be shown `online`.
 
+### YAML options
+
+For an example yaml see [`awox-ble-mesh-hub.yaml`](awox-ble-mesh-hub.yaml). For a full getting started see [#71](https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub/discussions/71).
+
+The available `awox_mesh:` config options:
+
+#### `mesh_name` _(string)_
+
+To connect to you device you need the `mesh_name` and `mesh_password` easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
+
+
+#### `mesh_password` _(string)_
+
+See [`mesh_name`](#mesh_name-string)
+
+
+#### `address_prefix` _(string - OPTIONAL)_
+
+The device will scan for available BLE devices and will use this prefix to filter discovered devices by MAC address.
+
+###### _Default value: `A4:C1`_
+
+
+#### `min_rssi` _(number - OPTIONAL)_
+
+The device will scan for available BLE devices and will use this value to filter discovered devices by the RSSI value.
+
+###### _Default value: -90_
+
+
+#### `allowed_mac_addresses` _(list of MAC addresses - OPTIONAL)_
+
+Instead of the `address_prefix` option you can configure a list of mac addresses that the hub is allowed to connect to. This enables you to exclude some devices that are often offline or to create multiple "mesh" networks when combined with the `allowed_mesh_ids` option.
+
+###### _Example:_
+```yaml
+  allowed_mac_addresses:
+    - A4:C1:38:8A:BA:11
+    - A4:C1:38:65:AD:22
+```
+
+
+#### `allowed_mesh_ids` _(list of numbers - OPTIONAL)_
+
+You can give a list of mesh_ids that only should be handled by this hub (ESPHome device).
+For example when you want to setup multiple ESP modules to only control a part of the mesh. Be sure to also set `allowed_mac_addresses` option to prevent that 1 device tries to connect to a mesh device that's not part of your `allowed_mesh_ids` list.
+
+###### _Example:_
+```yaml
+ allowed_mesh_ids:
+   - 12345
+   - 23456
+   - 6758
+```
+
+
+#### `max_connections` _(number, min: 1, max: 3 - OPTIONAL)_
+
+In some situations the device that the hub connects to isn't able to reach the next device in the mesh. Then it can help that the hub connects to a different/additional device to be able to reach all device.
+
+###### _Default value: 2_
+
+
+#### `device_info`
+
+List of device type descriptions.
+
+###### _Example:_
+```yaml
+  device_info:
+    - product_id: 0x32
+      device_type: RGB
+      manufacturer: EGLO
+      name: Spot 120
+      model: EGLOSpot 120/w
+      icon: mdi:wall-sconce-flat
+```
+
+For each `product_id` the available features and name + icon can be configured. Unknown devices will be recognized as a dimmable device (`DIM`).
+
+##### `product_id` _(hex value)_
+
+Each product type has a unique `product_id` ([see above](#devices) how to find the `product_id` of your devices).
+
+##### `device_type` _(RGB, DIM, WHITE_TEMP, PLUG)_
+
+- `RGB` - RGB device
+- `DIM` - dimmable device
+- `WHITE_TEMP` - Dimmable and adjustable white color device
+- `PLUG` - Plug (or on/off) device
+
+##### `manufacturer` _(string)_
+
+The name of the product manufacturer.
+
+######  _Example value `EGLO`_
+
+
+##### `name`
+
+The product name.
+
+###### _Example value `Spot 120`_
+
+
+##### `model`
+
+The product model name.
+
+###### _Example value `EGLOSpot 120/w`_
+
+##### `icon` _(string representing a mdi icon - OPTIONAL)_
+
+The product icon used for example in HomeAssistent as device icon.
+
+###### _Example value: `mdi:wall-sconce-flat`_
+
+
+### General YAML / Setup remarks
+
+- Disable Home Assistant API (`api:`) to prevent frequent MQTT disconnections
+- Use the `esp-idf` as framework type
 
 #### Hidden SSID WLAN
 In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
