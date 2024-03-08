@@ -67,7 +67,7 @@ void AwoxMeshMqtt::publish_connected(int active_connections, int online_devices,
     this->published_connected = true;
   }
 
-  if ((this->last_published_online_devices_ > 0) != (online_devices > 0)) {
+  if ((this->last_published_active_connections_ > 0) != (active_connections > 0)) {
     const std::string message = active_connections > 0 ? "online" : "offline";
     ESP_LOGI(TAG, "Publish mesh connection status: %s", message.c_str());
 
