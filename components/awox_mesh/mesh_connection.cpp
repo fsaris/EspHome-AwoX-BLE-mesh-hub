@@ -216,6 +216,27 @@ void MeshConnection::setup_connection() {
   this->pair_char = this->get_characteristic(esp32_ble_tracker::ESPBTUUID::from_raw(uuid_info_service),
                                              esp32_ble_tracker::ESPBTUUID::from_raw(uuid_pair_char));
 
+  if (this->notification_char == nullptr) {
+    ESP_LOGW(TAG, "[%d] [%s] No BLE Notification character found", this->get_conn_id(), this->address_str_.c_str());
+    this->disconnect();
+    this->set_address(0);
+    return;
+  }
+
+  if (this->command_char == nullptr) {
+    ESP_LOGW(TAG, "[%d] [%s] No BLE Command character found", this->get_conn_id(), this->address_str_.c_str());
+    this->disconnect();
+    this->set_address(0);
+    return;
+  }
+
+  if (this->pair_char == nullptr) {
+    ESP_LOGW(TAG, "[%d] [%s] No BLE Pair character found", this->get_conn_id(), this->address_str_.c_str());
+    this->disconnect();
+    this->set_address(0);
+    return;
+  }
+
   unsigned char key[8];
   esp_fill_random(key, 8);
   this->random_key = std::string((char *) key).substr(0, 8);
@@ -229,6 +250,9 @@ void MeshConnection::setup_connection() {
   if (status != ESP_OK) {
     ESP_LOGW(TAG, "[%d] [%s] esp_ble_gattc_read_char failed, error=%d", this->get_conn_id(), this->address_str_.c_str(),
              status);
+    this->disconnect();
+    this->set_address(0);
+    return;
   }
 
   ESP_LOGD(TAG, "Listen for notifications");
@@ -237,7 +261,11 @@ void MeshConnection::setup_connection() {
   if (status) {
     ESP_LOGW(TAG, "[%d] [%s] esp_ble_gattc_register_for_notify failed, status=%d", this->get_conn_id(),
              this->address_str_.c_str(), status);
+    this->disconnect();
+    this->set_address(0);
+    return;
   }
+
   ESP_LOGD(TAG, "Enable notifications");
   uint16_t notify_en = 1;
   this->notification_char->write_value((uint8_t *) &notify_en, sizeof(notify_en));
