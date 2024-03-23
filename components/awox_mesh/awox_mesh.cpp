@@ -174,6 +174,10 @@ void AwoxMesh::loop() {
       this->send_group_discovery(group);
     }
   }
+
+  if (now - this->last_found_device_cleanup < 20000) {
+    this->set_rssi_for_devices_that_are_not_available();
+  }
 }
 
 void AwoxMesh::disconnect_connections_with_overlapping_mesh_ids() {
@@ -274,9 +278,12 @@ FoundDevice *AwoxMesh::next_to_connect() {
 }
 
 void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
-  const uint32_t now = esphome::millis();
+  this->last_found_device_cleanup = esphome::millis();
   for (auto *found_device : this->found_devices_) {
-    if (now - found_device->last_detected > 20000) {
+    if (found_device->rssi > RSSI_NOT_AVAILABLE &&
+        this->last_found_device_cleanup - found_device->last_detected > 20000) {
+      ESP_LOGD(TAG, "Clear RSSI for %s [%d] not found the last 20 seconds", found_device->device.address_str().c_str(),
+               found_device->mesh_id);
       found_device->rssi = RSSI_NOT_AVAILABLE;
     }
   }
