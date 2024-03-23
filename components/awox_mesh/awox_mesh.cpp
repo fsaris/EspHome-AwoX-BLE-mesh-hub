@@ -75,10 +75,14 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_str().rfind(this->address_prefix, 0) != 0) {
+    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(),
+             device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
+    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(),
+             device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
