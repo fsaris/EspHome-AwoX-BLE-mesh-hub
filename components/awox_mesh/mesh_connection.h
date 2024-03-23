@@ -103,48 +103,51 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   virtual void set_state(esp32_ble_tracker::ClientState st) override {
     this->state_ = st;
+    std::string state = "";
     switch (st) {
       case esp32_ble_tracker::ClientState::INIT:
 
-        ESP_LOGI("awox.connection", "INIT");
+        state = "INIT";
         break;
       case esp32_ble_tracker::ClientState::DISCONNECTING:
 
-        ESP_LOGI("awox.connection", "DISCONNECTING");
+        state = "DISCONNECTING";
         break;
       case esp32_ble_tracker::ClientState::IDLE:
 
-        ESP_LOGI("awox.connection", "IDLE");
+        state = "IDLE";
         break;
       case esp32_ble_tracker::ClientState::SEARCHING:
 
-        ESP_LOGI("awox.connection", "SEARCHING");
+        state = "SEARCHING";
         break;
       case esp32_ble_tracker::ClientState::DISCOVERED:
 
-        ESP_LOGI("awox.connection", "DISCOVERED");
+        state = "DISCOVERED";
         break;
       case esp32_ble_tracker::ClientState::READY_TO_CONNECT:
 
-        ESP_LOGI("awox.connection", "READY_TO_CONNECT");
+        state = "READY_TO_CONNECT";
         break;
       case esp32_ble_tracker::ClientState::CONNECTING:
 
-        ESP_LOGI("awox.connection", "CONNECTING");
+        state = "CONNECTING";
         break;
       case esp32_ble_tracker::ClientState::CONNECTED:
 
-        ESP_LOGI("awox.connection", "CONNECTED");
+        state = "CONNECTED";
         break;
       case esp32_ble_tracker::ClientState::ESTABLISHED:
 
-        ESP_LOGI("awox.connection", "ESTABLISHED");
+        state = "ESTABLISHED";
         break;
 
       default:
-        ESP_LOGI("awox.connection", "Unknown state");
+        state = "Unknown state";
         break;
     }
+
+    ESP_LOGI("awox.connection", "set_state %s", state.c_str());
   }
 
  public:
