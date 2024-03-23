@@ -147,7 +147,7 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
         break;
     }
 
-    ESP_LOGI("awox.connection", "set_state %s", state.c_str());
+    ESP_LOGI("awox.connection", "[%d] set_state %s", this->connection_index_, state.c_str());
   }
 
  public:
