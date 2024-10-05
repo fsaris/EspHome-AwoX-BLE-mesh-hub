@@ -75,10 +75,14 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_str().rfind(this->address_prefix, 0) != 0) {
+    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(),
+             device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
+    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(),
+             device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
@@ -173,6 +177,10 @@ void AwoxMesh::loop() {
     if (!group->send_discovery && group->device_info != nullptr) {
       this->send_group_discovery(group);
     }
+  }
+
+  if (now - this->last_found_device_cleanup < 20000) {
+    this->set_rssi_for_devices_that_are_not_available();
   }
 }
 
@@ -274,9 +282,12 @@ FoundDevice *AwoxMesh::next_to_connect() {
 }
 
 void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
-  const uint32_t now = esphome::millis();
+  this->last_found_device_cleanup = esphome::millis();
   for (auto *found_device : this->found_devices_) {
-    if (now - found_device->last_detected > 20000) {
+    if (found_device->rssi > RSSI_NOT_AVAILABLE &&
+        this->last_found_device_cleanup - found_device->last_detected > 20000) {
+      ESP_LOGD(TAG, "Clear RSSI for %s [%d] not found the last 20 seconds", found_device->device.address_str().c_str(),
+               found_device->mesh_id);
       found_device->rssi = RSSI_NOT_AVAILABLE;
     }
   }
