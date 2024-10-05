@@ -350,8 +350,6 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
         root[MQTT_AVAILABILITY_MODE] = "all";
 
         // Features
-        root[MQTT_COLOR_MODE] = true;
-
         if (device->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS) ||
             device->device_info->has_feature(FEATURE_COLOR_BRIGHTNESS)) {
           root["brightness"] = true;
