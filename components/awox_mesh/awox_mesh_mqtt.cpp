@@ -472,8 +472,6 @@ void AwoxMeshMqtt::send_group_discovery(Group *group) {
         root[MQTT_AVAILABILITY_MODE] = "all";
 
         // Features
-        root[MQTT_COLOR_MODE] = true;
-
         if (group->device_info->has_feature(FEATURE_WHITE_BRIGHTNESS) ||
             group->device_info->has_feature(FEATURE_COLOR_BRIGHTNESS)) {
           root["brightness"] = true;
