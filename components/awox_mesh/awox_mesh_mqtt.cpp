@@ -395,15 +395,13 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
         device_info[MQTT_DEVICE_NAME] = device->device_info->get_name();
 
         if (strlen(device->device_info->get_model()) == 0) {
-          device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id()) +
-                                           " (" + std::to_string(device->mesh_id) + ")";
+          device_info[MQTT_DEVICE_MODEL] = get_product_code_as_hex_string(device->device_info->get_product_id());
         } else {
-          device_info[MQTT_DEVICE_MODEL] =
-              std::string(device->device_info->get_model()) + " (" + std::to_string(device->mesh_id) + ")";
+          device_info[MQTT_DEVICE_MODEL] = std::string(device->device_info->get_model());
         }
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
         device_info["via_device"] = get_mac_address();
-        // device_info["serial_number"] = "mesh-id: " + std::to_string(device->mesh_id);
+        device_info["serial_number"] = "mesh-id " + std::to_string(device->mesh_id);
       },
       0, discovery_info.retain);
 
@@ -519,7 +517,7 @@ void AwoxMeshMqtt::send_group_discovery(Group *group) {
         device_info[MQTT_DEVICE_NAME] = "Group " + std::to_string(group->group_id);
 
         device_info["via_device"] = get_mac_address();
-        // device_info["serial_number"] = "group-id: " + std::to_string(group->group_id);
+        device_info["serial_number"] = "group-id " + std::to_string(group->group_id);
       },
       0, discovery_info.retain);
 
