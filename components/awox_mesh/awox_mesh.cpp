@@ -427,6 +427,19 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   bool online = false;
   bool state = false;
 
+  bool first_device = false;
+  bool different_state = true;
+
+  bool color_mode = false;
+  bool sequence_mode = false;
+  bool candle_mode = false;
+  unsigned char white_brightness = 0;
+  unsigned char temperature = 0;
+  unsigned char color_brightness = 0;
+  unsigned char R = 0;
+  unsigned char G = 0;
+  unsigned char B = 0;
+
   for (Device *device : group->get_devices()) {
     if (group->device_info == nullptr && device->device_info != nullptr) {
       group->device_info = device->device_info;
@@ -437,13 +450,64 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     if (device->state) {
       state = true;
     }
-    if (online && state) {
+    if (first_device) {
+      different_state = false;
+      color_mode = device->color_mode;
+      sequence_mode = device->sequence_mode;
+      candle_mode = device->candle_mode;
+      white_brightness = device->white_brightness;
+      temperature = device->temperature;
+      color_brightness = device->color_brightness;
+      R = device->R;
+      G = device->G;
+      B = device->B;
+    } else {
+      if (color_mode != device->color_mode) {
+        different_state = true;
+      }
+      if (sequence_mode != device->sequence_mode) {
+        different_state = true;
+      }
+      if (candle_mode != device->candle_mode) {
+        different_state = true;
+      }
+      if (white_brightness != device->white_brightness) {
+        different_state = true;
+      }
+      if (temperature != device->temperature) {
+        different_state = true;
+      }
+      if (color_brightness != device->color_brightness) {
+        different_state = true;
+      }
+      if (R != device->R) {
+        different_state = true;
+      }
+      if (G != device->G) {
+        different_state = true;
+      }
+      if (B != device->B) {
+        different_state = true;
+      }
+    }
+    if (online && state && different_state) {
       break;
     }
   }
 
   group->state = state;
   group->online = online;
+  if (different_state != false) {
+    group->color_mode = color_mode;
+    group->sequence_mode = sequence_mode;
+    group->candle_mode = candle_mode;
+    group->white_brightness = white_brightness;
+    group->temperature = temperature;
+    group->color_brightness = color_brightness;
+    group->R = R;
+    group->G = G;
+    group->B = B;
+  }
 
   this->publish_state(group);
 }
