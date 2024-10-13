@@ -10,10 +10,13 @@ namespace esphome {
 namespace awox_mesh {
 
 std::string Group::state_as_string() {
-  std::string output = "";
+  std::string output = "group ";
 
   output += std::to_string(this->group_id);
   output += ": ";
+  output += "(";
+  output += std::to_string(this->dest());
+  output += ")";
   output += this->state ? "ON" : "OFF";
 
   output += " ";

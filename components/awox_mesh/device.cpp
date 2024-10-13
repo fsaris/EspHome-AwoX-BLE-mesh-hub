@@ -39,8 +39,8 @@ void Device::set_address(unsigned char part3, unsigned char part4, unsigned char
 
 bool Device::address_set() { return this->address_[0] > 0; }
 
-std::string Device::device_state_as_string() {
-  std::string output = "";
+std::string Device::state_as_string() {
+  std::string output = "device ";
 
   output += std::to_string(this->mesh_id);
   output += ": ";

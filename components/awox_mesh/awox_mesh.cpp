@@ -361,7 +361,7 @@ Group *AwoxMesh::get_group(int dest, Device *device) {
 
   if (found != mesh_groups_.end()) {
     Group *group = mesh_groups_.at(found - mesh_groups_.begin());
-    ESP_LOGV(TAG, "Found existing group_id: %d, Number of found mesh groups = %d", group->group_id,
+    ESP_LOGD(TAG, "Found existing group_id: %d, Number of found mesh groups = %d", group->group_id,
              this->mesh_groups_.size());
 
     group->add_device(device);
@@ -421,13 +421,17 @@ void AwoxMesh::publish_availability(Device *device, bool delayed) {
   }
 
   this->publish_connection->publish_availability(device);
+
+  for (Group *group : device->get_groups()) {
+    this->publish_connection->publish_availability(group);
+  }
 }
 
 void AwoxMesh::sync_and_publish_group_state(Group *group) {
   bool online = false;
   bool state = false;
 
-  bool first_device = false;
+  bool first_device = true;
   bool different_state = true;
 
   bool color_mode = false;
@@ -440,6 +444,8 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   unsigned char G = 0;
   unsigned char B = 0;
 
+  ESP_LOGD(TAG, "Sync %s", group->state_as_string().c_str());
+
   for (Device *device : group->get_devices()) {
     if (group->device_info == nullptr && device->device_info != nullptr) {
       group->device_info = device->device_info;
@@ -450,7 +456,10 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     if (device->state) {
       state = true;
     }
+
+    ESP_LOGD(TAG, "Sync group state, %s", device->state_as_string().c_str());
     if (first_device) {
+      first_device = false;
       different_state = false;
       color_mode = device->color_mode;
       sequence_mode = device->sequence_mode;
@@ -471,23 +480,26 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
       if (candle_mode != device->candle_mode) {
         different_state = true;
       }
-      if (white_brightness != device->white_brightness) {
-        different_state = true;
-      }
-      if (temperature != device->temperature) {
-        different_state = true;
-      }
-      if (color_brightness != device->color_brightness) {
-        different_state = true;
-      }
-      if (R != device->R) {
-        different_state = true;
-      }
-      if (G != device->G) {
-        different_state = true;
-      }
-      if (B != device->B) {
-        different_state = true;
+      if (color_mode) {
+        if (color_brightness != device->color_brightness) {
+          different_state = true;
+        }
+        if (R != device->R) {
+          different_state = true;
+        }
+        if (G != device->G) {
+          different_state = true;
+        }
+        if (B != device->B) {
+          different_state = true;
+        }
+      } else {
+        if (white_brightness != device->white_brightness) {
+          different_state = true;
+        }
+        if (temperature != device->temperature) {
+          different_state = true;
+        }
       }
     }
     if (online && state && different_state) {
@@ -497,7 +509,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
 
   group->state = state;
   group->online = online;
-  if (different_state != false) {
+  if (different_state == false) {
     group->color_mode = color_mode;
     group->sequence_mode = sequence_mode;
     group->candle_mode = candle_mode;
@@ -507,12 +519,17 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     group->R = R;
     group->G = G;
     group->B = B;
+    ESP_LOGD(TAG, "Sync group state, %s", group->state_as_string().c_str());
+  } else {
+    ESP_LOGD(TAG, "No sync of group state, %s", group->state_as_string().c_str());
   }
 
   this->publish_state(group);
 }
 
 void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
+
+  ESP_LOGD(TAG, "Publish: %s", mesh_destination->state_as_string().c_str());
   this->publish_connection->publish_state(mesh_destination);
 
   for (Group *group : mesh_destination->get_groups()) {

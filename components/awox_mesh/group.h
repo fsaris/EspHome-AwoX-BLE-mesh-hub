@@ -31,7 +31,7 @@ class Group : public MeshDestination {
 
   std::vector<Group *> get_groups() const override { return std::vector<Group *>{}; };
 
-  std::string state_as_string();
+  std::string state_as_string() override;
 
   std::vector<Device *> get_devices();
 

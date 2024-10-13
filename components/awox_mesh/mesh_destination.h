@@ -33,6 +33,7 @@ class MeshDestination {
   virtual const char *type() const;
   virtual bool can_publish_state();
   virtual std::vector<Group *> get_groups() const;
+  virtual std::string state_as_string();
 
   const MeshDestinationState state_as_char() {
     MeshDestinationState state = {};
@@ -46,6 +47,8 @@ class MeshDestination {
       state.state[0] += 4;
     if (this->candle_mode)
       state.state[0] += 8;
+    if (this->online)
+      state.state[0] += 16;
 
     state.state[1] = this->white_brightness;
     state.state[2] = this->temperature;

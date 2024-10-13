@@ -47,7 +47,7 @@ class Device : public MeshDestination {
 
   bool address_set();
 
-  std::string device_state_as_string();
+  std::string state_as_string() override;
 
   void add_group(Group *group);
 
