@@ -444,7 +444,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   unsigned char G = 0;
   unsigned char B = 0;
 
-  ESP_LOGD(TAG, "Sync %s", group->state_as_string().c_str());
+  ESP_LOGV(TAG, "Sync %s", group->state_as_string().c_str());
 
   for (Device *device : group->get_devices()) {
     if (group->device_info == nullptr && device->device_info != nullptr) {
@@ -457,7 +457,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
       state = true;
     }
 
-    ESP_LOGD(TAG, "Sync group state, %s", device->state_as_string().c_str());
+    ESP_LOGV(TAG, "Sync group state, %s", device->state_as_string().c_str());
     if (first_device) {
       first_device = false;
       different_state = false;
@@ -521,15 +521,14 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     group->B = B;
     ESP_LOGD(TAG, "Sync group state, %s", group->state_as_string().c_str());
   } else {
-    ESP_LOGD(TAG, "No sync of group state, %s", group->state_as_string().c_str());
+    ESP_LOGV(TAG, "No sync of group state, %s", group->state_as_string().c_str());
   }
 
   this->publish_state(group);
 }
 
 void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
-
-  ESP_LOGD(TAG, "Publish: %s", mesh_destination->state_as_string().c_str());
+  ESP_LOGV(TAG, "Publish: %s", mesh_destination->state_as_string().c_str());
   this->publish_connection->publish_state(mesh_destination);
 
   for (Group *group : mesh_destination->get_groups()) {
