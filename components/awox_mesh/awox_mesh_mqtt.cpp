@@ -114,7 +114,7 @@ void AwoxMeshMqtt::publish_availability(Device *device) {
   this->last_published_availability_[device->dest()] = device->online;
 
   const std::string message = device->online ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish online/offline for %d - %s", device->mesh_id, message.c_str());
+  ESP_LOGI(TAG, "Publish online/offline for %u - %s", device->mesh_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
@@ -126,20 +126,20 @@ void AwoxMeshMqtt::publish_availability(Group *group) {
   this->last_published_availability_[group->dest()] = group->online;
 
   const std::string message = group->online ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish online/offline for group %d - %s", group->group_id, message.c_str());
+  ESP_LOGI(TAG, "Publish online/offline for group %u - %s", group->group_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(group, "availability"), message, 0, true);
 }
 
 void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
   if (!mesh_destination->can_publish_state()) {
-    ESP_LOGW(TAG, "[%d] Can not yet send publish state for %s", mesh_destination->dest(), mesh_destination->type());
+    ESP_LOGW(TAG, "[%u] Can not yet send publish state for %s", mesh_destination->dest(), mesh_destination->type());
     return;
   }
 
   if (this->last_published_state_.count(mesh_destination->dest()) &&
       memcmp(this->last_published_state_[mesh_destination->dest()].state, mesh_destination->state_as_char().state, 7) ==
           0) {
-    ESP_LOGV(TAG, "[%d] No need to update state is equal to last publication for %s", mesh_destination->dest(),
+    ESP_LOGV(TAG, "[%u] No need to update state is equal to last publication for %s", mesh_destination->dest(),
              mesh_destination->type());
     return;
   }
@@ -316,7 +316,7 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
     return;
   }
 
-  ESP_LOGD(TAG, "[%d]: Sending discovery productID: 0x%02X (%s - %s) mac: %s", device->mesh_id,
+  ESP_LOGD(TAG, "[%u]: Sending discovery productID: 0x%02X (%s - %s) mac: %s", device->mesh_id,
            device->device_info->get_product_id(), device->device_info->get_name(), device->device_info->get_model(),
            device->address_str().c_str());
 
@@ -535,15 +535,15 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
   int dest = mesh_destination->dest();
   bool state_set = false;
 
-  ESP_LOGI(TAG, "[%d] Process command %s", dest, mesh_destination->type());
+  ESP_LOGI(TAG, "[%u] Process command %s", dest, mesh_destination->type());
 
   if (root.containsKey("fade_duration")) {
-    ESP_LOGD(TAG, "[%d] set sequence fade_duration %d", dest, (int) root["fade_duration"]);
+    ESP_LOGD(TAG, "[%u] set sequence fade_duration %d", dest, (int) root["fade_duration"]);
     this->mesh_->set_sequence_fade_duration(dest, (int) root["fade_duration"]);
   }
 
   if (root.containsKey("color_duration")) {
-    ESP_LOGD(TAG, "[%d] set sequence color_duration %d", dest, (int) root["color_duration"]);
+    ESP_LOGD(TAG, "[%u] set sequence color_duration %d", dest, (int) root["color_duration"]);
     this->mesh_->set_sequence_color_duration(dest, (int) root["color_duration"]);
   }
 
@@ -557,7 +557,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
     mesh_destination->G = (int) color["g"];
     mesh_destination->B = (int) color["b"];
 
-    ESP_LOGD(TAG, "[%d] Process command color %d %d %d", dest, (int) color["r"], (int) color["g"], (int) color["b"]);
+    ESP_LOGD(TAG, "[%u] Process command color %d %d %d", dest, (int) color["r"], (int) color["g"], (int) color["b"]);
 
     this->mesh_->set_color(dest, (int) color["r"], (int) color["g"], (int) color["b"]);
   }
@@ -570,7 +570,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
     mesh_destination->state = true;
     mesh_destination->color_brightness = brightness;
 
-    ESP_LOGD(TAG, "[%d] Process command color_brightness %d", dest, (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%u] Process command color_brightness %d", dest, (int) root["brightness"]);
     this->mesh_->set_color_brightness(dest, brightness);
 
   } else if (root.containsKey("brightness")) {
@@ -580,7 +580,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
     mesh_destination->state = true;
     mesh_destination->white_brightness = brightness;
 
-    ESP_LOGD(TAG, "[%d] Process command white_brightness %d", dest, (int) root["brightness"]);
+    ESP_LOGD(TAG, "[%u] Process command white_brightness %d", dest, (int) root["brightness"]);
     this->mesh_->set_white_brightness(dest, brightness);
   }
 
@@ -592,7 +592,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
     mesh_destination->color_mode = false;
     mesh_destination->temperature = temperature;
 
-    ESP_LOGD(TAG, "[%d] Process command color_temp %d", dest, (int) root["color_temp"]);
+    ESP_LOGD(TAG, "[%u] Process command color_temp %d", dest, (int) root["color_temp"]);
     this->mesh_->set_white_temperature(dest, temperature);
   }
 
@@ -617,7 +617,7 @@ void AwoxMeshMqtt::process_incomming_command(MeshDestination *mesh_destination, 
   }
 
   if (root.containsKey("state")) {
-    ESP_LOGD(TAG, "[%d] Process command state", dest);
+    ESP_LOGD(TAG, "[%u] Process command state", dest);
     auto val = parse_on_off(root["state"]);
     switch (val) {
       case PARSE_ON:
