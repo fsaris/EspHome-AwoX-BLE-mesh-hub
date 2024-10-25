@@ -169,7 +169,7 @@ void AwoxMesh::loop() {
     if (publish.online == publish.device->online) {
       this->publish_availability(publish.device, false);
     } else {
-      ESP_LOGD(TAG, "Skipped publishing availability for %u - %s (is currently %s)", publish.device->mesh_id,
+      ESP_LOGD(TAG, "Skipped publishing availability for %u - %s (is currently %s again)", publish.device->mesh_id,
                publish.online ? "Online" : "Offline", publish.device->online ? "Online" : "Offline");
     }
   }

@@ -114,7 +114,7 @@ void AwoxMeshMqtt::publish_availability(Device *device) {
   this->last_published_availability_[device->dest()] = device->online;
 
   const std::string message = device->online ? "online" : "offline";
-  ESP_LOGI(TAG, "Publish online/offline for %u - %s", device->mesh_id, message.c_str());
+  ESP_LOGI(TAG, "Publish online/offline for device %u - %s", device->mesh_id, message.c_str());
   global_mqtt_client->publish(this->get_mqtt_topic_for_(device, "availability"), message, 0, true);
 }
 
