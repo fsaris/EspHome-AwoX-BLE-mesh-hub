@@ -146,6 +146,8 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
 
   this->last_published_state_[mesh_destination->dest()] = mesh_destination->state_as_char();
 
+  ESP_LOGD(TAG, "Publish state for %s", mesh_destination->state_as_string().c_str());
+
   if (mesh_destination->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->publish_json(
         this->get_mqtt_topic_for_(mesh_destination, "state"),
