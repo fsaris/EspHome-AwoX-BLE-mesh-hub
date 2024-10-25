@@ -433,7 +433,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   bool state = false;
 
   bool first_device = true;
-  bool different_state = true;
+  bool all_devices_same_state = false;
 
   bool color_mode = false;
   bool sequence_mode = false;
@@ -461,7 +461,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     ESP_LOGV(TAG, "Sync group state, %s", device->state_as_string().c_str());
     if (first_device) {
       first_device = false;
-      different_state = false;
+      all_devices_same_state = true;
       color_mode = device->color_mode;
       sequence_mode = device->sequence_mode;
       candle_mode = device->candle_mode;
@@ -473,44 +473,45 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
       B = device->B;
     } else {
       if (color_mode != device->color_mode) {
-        different_state = true;
+        all_devices_same_state = false;
       }
       if (sequence_mode != device->sequence_mode) {
-        different_state = true;
+        all_devices_same_state = false;
       }
       if (candle_mode != device->candle_mode) {
-        different_state = true;
+        all_devices_same_state = false;
       }
       if (color_mode) {
         if (color_brightness != device->color_brightness) {
-          different_state = true;
+          all_devices_same_state = false;
         }
         if (R != device->R) {
-          different_state = true;
+          all_devices_same_state = false;
         }
         if (G != device->G) {
-          different_state = true;
+          all_devices_same_state = false;
         }
         if (B != device->B) {
-          different_state = true;
+          all_devices_same_state = false;
         }
       } else {
         if (white_brightness != device->white_brightness) {
-          different_state = true;
+          all_devices_same_state = false;
         }
         if (temperature != device->temperature) {
-          different_state = true;
+          all_devices_same_state = false;
         }
       }
     }
-    if (online && state && different_state) {
+    if (online && state && !all_devices_same_state) {
       break;
     }
   }
 
   group->state = state;
   group->online = online;
-  if (different_state == false) {
+
+  if (all_devices_same_state) {
     group->color_mode = color_mode;
     group->sequence_mode = sequence_mode;
     group->candle_mode = candle_mode;
