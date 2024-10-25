@@ -75,20 +75,20 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_str().rfind(this->address_prefix, 0) != 0) {
-    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %u, address_prefix mismatch", device.get_name().c_str(),
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %u, address_prefix mismatch", device.get_name().c_str(),
              device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
-    ESP_LOGD(TAG, "Skipped device %s - %s. RSSI: %u, not in mac_addresses_allowed", device.get_name().c_str(),
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %u, not in mac_addresses_allowed", device.get_name().c_str(),
              device.address_str().c_str(), device.get_rssi());
     return false;
   }
 
   add_to_found_devices(device);
 
-  ESP_LOGD(TAG, "Found Awox device %s - %s. RSSI: %u dB (total devices: %d)", device.get_name().c_str(),
+  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %u dB (total devices: %d)", device.get_name().c_str(),
            device.address_str().c_str(), device.get_rssi(), this->found_devices_.size());
 
   return true;
