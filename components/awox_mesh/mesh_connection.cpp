@@ -103,7 +103,7 @@ void MeshConnection::loop() {
 
   if (this->connected() && !this->command_queue.empty() &&
       this->last_send_command < esphome::millis() - this->command_debounce_time) {
-    ESP_LOGV(TAG, "Send command, time since last command: %d", esphome::millis() - this->last_send_command);
+    ESP_LOGV(TAG, "Send command, time since last command: %d", (int) (esphome::millis() - this->last_send_command));
     this->last_send_command = esphome::millis();
     QueuedCommand item = this->command_queue.front();
     ESP_LOGV(TAG, "Send command %u, for dest: %u", item.command, item.dest);
