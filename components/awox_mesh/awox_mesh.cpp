@@ -75,21 +75,21 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_str().rfind(this->address_prefix, 0) != 0) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %u, address_prefix mismatch", device.get_name().c_str(),
-             device.address_str().c_str(), device.get_rssi());
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(),
+             device.address_str().c_str(), (int) device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %u, not in mac_addresses_allowed", device.get_name().c_str(),
-             device.address_str().c_str(), device.get_rssi());
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(),
+             device.address_str().c_str(), (int) device.get_rssi());
     return false;
   }
 
   add_to_found_devices(device);
 
-  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %u dB (total devices: %d)", device.get_name().c_str(),
-           device.address_str().c_str(), device.get_rssi(), this->found_devices_.size());
+  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
+           device.address_str().c_str(), (int) device.get_rssi(), this->found_devices_.size());
 
   return true;
 }
@@ -135,12 +135,13 @@ void AwoxMesh::loop() {
         }
 
         if (found_device->connected) {
-          ESP_LOGI(TAG, "Skipped to connect %s => rssi: %u already connected!!",
-                   found_device->device.address_str().c_str(), found_device->rssi);
+          ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!",
+                   found_device->device.address_str().c_str(), (int) found_device->rssi);
           break;
         }
 
-        ESP_LOGI(TAG, "Try to connect %s => rssi: %u", found_device->device.address_str().c_str(), found_device->rssi);
+        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str().c_str(),
+                 (int) found_device->rssi);
 
         connection->connect_to(found_device);
 
@@ -234,8 +235,8 @@ FoundDevice *AwoxMesh::next_to_connect() {
 
   ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
   for (auto *found_device : this->found_devices_) {
-    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %u", found_device->device.address_str().c_str(),
-             found_device->mesh_id, found_device->rssi);
+    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %d", found_device->device.address_str().c_str(),
+             found_device->mesh_id, (int) found_device->rssi);
   }
 
   std::vector<int> linked_mesh_ids;
