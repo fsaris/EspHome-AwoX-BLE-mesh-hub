@@ -51,11 +51,7 @@ std::string AwoxMeshMqtt::get_discovery_topic_(const MQTTDiscoveryInfo &discover
 }
 
 std::string AwoxMeshMqtt::get_mqtt_topic_for_(MeshDestination *mesh_destination, const std::string &suffix) const {
-  if (strcmp(mesh_destination->type(), "group") == 0) {
-    return global_mqtt_client->get_topic_prefix() + "/group-" + std::to_string(mesh_destination->dest()) + "/" + suffix;
-  } else {
-    return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(mesh_destination->dest()) + "/" + suffix;
-  }
+  return global_mqtt_client->get_topic_prefix() + "/" + std::to_string(mesh_destination->dest()) + "/" + suffix;
 }
 
 void AwoxMeshMqtt::publish_connected(int active_connections, int online_devices,
