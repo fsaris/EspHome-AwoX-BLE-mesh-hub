@@ -37,6 +37,9 @@ mqtt:
   username: !secret mqtt_user
   password: !secret mqtt_password
 
+  # Disable retained discovery messages until you are got the config correct
+  discovery_retain: False
+
 # Disable Home Assistant API to prevent frequent MQTT disconnections
 #api:
 
