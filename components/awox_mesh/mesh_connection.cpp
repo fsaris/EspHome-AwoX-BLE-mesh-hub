@@ -163,7 +163,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
       }
       std::string notification = std::string((char *) param->notify.value, param->notify.value_len);
       std::string packet = this->decrypt_packet(notification);
-      ESP_LOGV(TAG, "Notification received: %s", string_as_binary_string(packet).c_str());
+      ESP_LOGV(TAG, "Notification received: %s", string_as_hex_string(packet).c_str());
       this->handle_packet(packet);
       break;
     }

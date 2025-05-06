@@ -14,6 +14,16 @@ static std::string string_as_binary_string(std::string words) {
   return binary_string;
 }
 
+static std::string string_as_hex_string(std::string words) {
+  std::string hex_string = "";
+  for (char &_char : words) {
+    char value[3];
+    sprintf(value, "%02X", _char);
+    hex_string += value;
+  }
+  return hex_string;
+}
+
 static std::string int_as_hex_string(unsigned char hex1, unsigned char hex2, unsigned char hex3) {
   char value[7];
   sprintf(value, "%02X%02X%02X", hex1, hex2, hex3);
