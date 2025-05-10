@@ -158,7 +158,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
       }
       if (param->notify.handle != this->notification_char->handle) {
         ESP_LOGW(TAG, "Unknown notification received from handle %d: %s", param->notify.handle,
-                 string_as_binary_string(std::string((char *) param->notify.value, param->notify.value_len)).c_str());
+                 string_as_hex_string(std::string((char *) param->notify.value, param->notify.value_len)).c_str());
         break;
       }
       std::string notification = std::string((char *) param->notify.value, param->notify.value_len);
@@ -182,7 +182,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
                                      std::string((char *) param->read.value, param->read.value_len).substr(1, 9));
 
           ESP_LOGI(TAG, "[%u] [%s] session key %s", this->get_conn_id(), this->address_str_.c_str(),
-                   string_as_binary_string(this->session_key).c_str());
+                   string_as_hex_string(this->session_key).c_str());
 
           this->request_status();
 
@@ -195,7 +195,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
         }
 
         ESP_LOGI(TAG, "[%u] [%s] response %s", this->get_conn_id(), this->address_str_.c_str(),
-                 string_as_binary_string(std::string((char *) param->read.value, param->read.value_len)).c_str());
+                 string_as_hex_string(std::string((char *) param->read.value, param->read.value_len)).c_str());
         this->disconnect();
         this->set_address(0);
       }
@@ -359,6 +359,8 @@ void MeshConnection::handle_packet(std::string &packet) {
   mesh_id = 0;
 
   if (static_cast<unsigned char>(packet[7]) == COMMAND_ONLINE_STATUS_REPORT) {  // DC
+    // Mesh ID is in packet[10] and packet[19]
+    // Packet[3] and packet[4] Are the mesh ID in the other commands
     mesh_id = (static_cast<unsigned char>(packet[19]) * 256) + static_cast<unsigned char>(packet[10]);
     mode = static_cast<unsigned char>(packet[12]);
 
@@ -445,7 +447,7 @@ void MeshConnection::handle_packet(std::string &packet) {
   } else {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
     ESP_LOGW(TAG, "Unknown report, dev [%u]: command %02X => %s", mesh_id, static_cast<unsigned char>(packet[7]),
-             string_as_binary_string(packet).c_str());
+             string_as_hex_string(packet).c_str());
 
     return;
   }
@@ -533,7 +535,7 @@ std::string MeshConnection::build_packet(int dest, int command, const std::strin
 All multi-byte elements are in little-endian form.
 Packet counter runs between 1 and 0xffff.
 */
-  ESP_LOGV(TAG, "command: %d, data: %s, dest: %d", command, string_as_binary_string(data).c_str(), dest);
+  ESP_LOGV(TAG, "command: %d, data: %s, dest: %d", command, string_as_hex_string(data).c_str(), dest);
   std::string packet;
   packet.resize(20, 0);
   packet[0] = this->packet_count & 0xff;
@@ -567,7 +569,7 @@ void MeshConnection::queue_command(int command, const std::string &data, int des
 
 bool MeshConnection::write_command(int command, const std::string &data, int dest, bool withResponse) {
   ESP_LOGD(TAG, "[%u] [%s] [%u] write_command packet %02X => %s", this->get_conn_id(), this->address_str_.c_str(), dest,
-           command, string_as_binary_string(data).c_str());
+           command, string_as_hex_string(data).c_str());
   std::string packet = this->build_packet(dest, command, data);
   // todo: withResponse
   auto status = this->command_char->write_value((uint8_t *) packet.data(), packet.size());

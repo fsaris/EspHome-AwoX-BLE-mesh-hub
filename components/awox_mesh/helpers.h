@@ -20,6 +20,9 @@ static std::string string_as_hex_string(std::string words) {
     char value[3];
     sprintf(value, "%02X", _char);
     hex_string += value;
+    if (hex_string.size() > 2) {
+      hex_string += ":";
+    }
   }
   return hex_string;
 }
