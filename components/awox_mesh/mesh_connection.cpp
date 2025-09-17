@@ -49,8 +49,6 @@ static std::string encrypt(std::string key, std::string data) {
 static int get_product_code(unsigned char part1, unsigned char part2) { return int(part2); }
 
 void MeshConnection::connect_to(FoundDevice *found_device) {
-  this->set_address(found_device->device.address_uint64());
-  this->set_state(esp32_ble_tracker::ClientState::DISCOVERED);
   this->found_device = found_device;
   this->found_device->connected = true;
 
