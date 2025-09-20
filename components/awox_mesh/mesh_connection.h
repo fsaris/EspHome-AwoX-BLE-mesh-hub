@@ -107,39 +107,34 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
     std::string state = "";
     switch (st) {
       case esp32_ble_tracker::ClientState::INIT:
-
         state = "INIT";
         break;
-      case esp32_ble_tracker::ClientState::DISCONNECTING:
 
+      case esp32_ble_tracker::ClientState::DISCONNECTING:
         state = "DISCONNECTING";
         break;
-      case esp32_ble_tracker::ClientState::IDLE:
 
+      case esp32_ble_tracker::ClientState::IDLE:
         state = "IDLE";
         break;
-      case esp32_ble_tracker::ClientState::SEARCHING:
 
-        state = "SEARCHING";
-        break;
       case esp32_ble_tracker::ClientState::DISCOVERED:
-
         state = "DISCOVERED";
         break;
-      case esp32_ble_tracker::ClientState::READY_TO_CONNECT:
 
+      case esp32_ble_tracker::ClientState::READY_TO_CONNECT:
         state = "READY_TO_CONNECT";
         break;
-      case esp32_ble_tracker::ClientState::CONNECTING:
 
+      case esp32_ble_tracker::ClientState::CONNECTING:
         state = "CONNECTING";
         break;
-      case esp32_ble_tracker::ClientState::CONNECTED:
 
+      case esp32_ble_tracker::ClientState::CONNECTED:
         state = "CONNECTED";
         break;
-      case esp32_ble_tracker::ClientState::ESTABLISHED:
 
+      case esp32_ble_tracker::ClientState::ESTABLISHED:
         state = "ESTABLISHED";
         break;
 
