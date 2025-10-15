@@ -103,47 +103,7 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   virtual void set_state(esp32_ble_tracker::ClientState st) override {
     esp32_ble_client::BLEClientBase::set_state(st);
-
-    std::string state = "";
-    switch (st) {
-      case esp32_ble_tracker::ClientState::INIT:
-        state = "INIT";
-        break;
-
-      case esp32_ble_tracker::ClientState::DISCONNECTING:
-        state = "DISCONNECTING";
-        break;
-
-      case esp32_ble_tracker::ClientState::IDLE:
-        state = "IDLE";
-        break;
-
-      case esp32_ble_tracker::ClientState::DISCOVERED:
-        state = "DISCOVERED";
-        break;
-
-      case esp32_ble_tracker::ClientState::READY_TO_CONNECT:
-        state = "READY_TO_CONNECT";
-        break;
-
-      case esp32_ble_tracker::ClientState::CONNECTING:
-        state = "CONNECTING";
-        break;
-
-      case esp32_ble_tracker::ClientState::CONNECTED:
-        state = "CONNECTED";
-        break;
-
-      case esp32_ble_tracker::ClientState::ESTABLISHED:
-        state = "ESTABLISHED";
-        break;
-
-      default:
-        state = "Unknown state";
-        break;
-    }
-
-    ESP_LOGI("awox.connection", "[%d] set_state %s", this->connection_index_, state.c_str());
+    ESP_LOGI("awox.connection", "[%d] set_state %s", this->connection_index_, esp32_ble_tracker::client_state_to_string(st));
   }
 
  public:
