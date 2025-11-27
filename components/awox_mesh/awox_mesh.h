@@ -41,7 +41,7 @@ struct FoundDevice {
 class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component {
   uint32_t start;
   uint32_t device_info_request_interval_ms = 5000;
-  uint32_t delayed_availability_publish_debounce_time_ms = 6000;
+  uint32_t delayed_availability_publish_debounce_time_ms = 3000;
 
 
   bool ready_to_connect = false;
