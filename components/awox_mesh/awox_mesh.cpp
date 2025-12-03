@@ -153,14 +153,14 @@ void AwoxMesh::loop() {
 
   for (auto *device : this->mesh_devices_) {
     if (!device->send_discovery && device->device_info_requested > 0 &&
-        device->device_info_requested < esphome::millis() - 5000) {
+        device->device_info_requested < esphome::millis() - this->device_info_request_interval_ms) {
       ESP_LOGD(TAG, "Request info again for %u", device->mesh_id);
       this->request_device_info(device);
     }
   }
 
   while (!this->delayed_availability_publish.empty()) {
-    if (this->delayed_availability_publish.front().time > esphome::millis() - 3000) {
+    if (this->delayed_availability_publish.front().time > esphome::millis() - this->delayed_availability_publish_debounce_time_ms) {
       break;
     }
 
