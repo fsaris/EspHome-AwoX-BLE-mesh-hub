@@ -486,7 +486,7 @@ void MeshConnection::handle_packet(std::string &packet) {
   device->last_online = esphome::millis();
 
   // todo move logic below to mesh or mqtt class
-  ESP_LOGI(TAG, device->state_as_string());
+  ESP_LOGI(TAG, device->state_as_string().c_str());
   this->mesh_->publish_state(device);
 
   if (online_changed) {
