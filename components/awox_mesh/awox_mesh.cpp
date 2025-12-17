@@ -55,9 +55,9 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
   if (found != found_devices_.end()) {
     found_device = found_devices_.at(found - found_devices_.begin());
-    ESP_LOGV(TAG, "Found existing device: %s", found_device->device.address_str().c_str());
+    ESP_LOGV(TAG, "Found existing device: %s", found_device->device.address_str());
   } else {
-    ESP_LOGV(TAG, "Register device: %s", device.address_str().c_str());
+    ESP_LOGV(TAG, "Register device: %s", device.address_str());
     found_device = new FoundDevice();
     found_device->device = device;
     this->found_devices_.push_back(found_device);
@@ -75,21 +75,21 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_str().rfind(this->address_prefix, 0) != 0) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(),
-             device.address_str().c_str(), (int) device.get_rssi());
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name(),
+             device.address_str(), (int) device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(),
-             device.address_str().c_str(), (int) device.get_rssi());
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name(),
+             device.address_str(), (int) device.get_rssi());
     return false;
   }
 
   add_to_found_devices(device);
 
-  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
-           device.address_str().c_str(), (int) device.get_rssi(), this->found_devices_.size());
+  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name(),
+           device.address_str(), (int) device.get_rssi(), this->found_devices_.size());
 
   return true;
 }
