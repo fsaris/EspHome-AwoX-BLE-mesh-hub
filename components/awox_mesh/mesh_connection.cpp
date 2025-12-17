@@ -34,8 +34,8 @@ static std::string encrypt(std::string key, std::string data) {
 
   esp_aes_context aes;
   esp_aes_init(&aes);
-  esp_aes_setkey(&aes, (const unsigned char *) key, key.size() * 8);
-  esp_aes_crypt_ecb(&aes, 1, (const unsigned char *) data, buffer);
+  esp_aes_setkey(&aes, (const unsigned char *) key.c_str(), key.size() * 8);
+  esp_aes_crypt_ecb(&aes, 1, (const unsigned char *) data.c_str(), buffer);
   esp_aes_free(&aes);
 
   std::string result = std::string((char *) buffer, 16);
