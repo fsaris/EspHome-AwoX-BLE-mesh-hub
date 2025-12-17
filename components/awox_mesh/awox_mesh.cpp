@@ -136,11 +136,11 @@ void AwoxMesh::loop() {
 
         if (found_device->connected) {
           ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!",
-                   found_device->device.address_str().c_str(), (int) found_device->rssi);
+                   found_device->device.address_str(), (int) found_device->rssi);
           break;
         }
 
-        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str().c_str(),
+        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str(),
                  (int) found_device->rssi);
 
         connection->connect_to(found_device);
@@ -206,12 +206,12 @@ void AwoxMesh::disconnect_connection_with_overlapping_mesh_ids(const int a, cons
   }
   if (this->connections_[a]->get_linked_mesh_ids().size() > this->connections_[b]->get_linked_mesh_ids().size()) {
     ESP_LOGI(TAG, "Disconnect connection %u [%s] due to overlapping mesh_id's with other connection", b,
-             this->connections_[b]->address_str().c_str());
+             this->connections_[b]->address_str());
     this->connections_[b]->clear_linked_mesh_ids();
     this->connections_[b]->disconnect();
   } else {
     ESP_LOGI(TAG, "Disconnect connection %u [%s] due to overlapping mesh_id's with other connection", a,
-             this->connections_[a]->address_str().c_str());
+             this->connections_[a]->address_str());
     this->connections_[a]->clear_linked_mesh_ids();
     this->connections_[a]->disconnect();
   }
@@ -227,7 +227,7 @@ FoundDevice *AwoxMesh::next_to_connect() {
     if (found_device->mesh_id == 0) {
       Device *device = this->get_device(found_device->device.address_uint64());
       if (device != nullptr) {
-        ESP_LOGD(TAG, "Set mesh_id %u for device %s", device->mesh_id, found_device->device.address_str().c_str());
+        ESP_LOGD(TAG, "Set mesh_id %u for device %s", device->mesh_id, found_device->device.address_str());
         found_device->mesh_id = device->mesh_id;
       }
     }
@@ -235,7 +235,7 @@ FoundDevice *AwoxMesh::next_to_connect() {
 
   ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
   for (auto *found_device : this->found_devices_) {
-    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %d", found_device->device.address_str().c_str(),
+    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %d", found_device->device.address_str(),
              found_device->mesh_id, (int) found_device->rssi);
   }
 
@@ -267,13 +267,13 @@ FoundDevice *AwoxMesh::next_to_connect() {
     if (!found_device->connected && found_device->rssi >= this->minimum_rssi) {
       // unknown mesh_id then the device is definitly not in reach of our current connection
       if (found_device->mesh_id == 0) {
-        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->device.address_str().c_str());
+        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->device.address_str());
         return found_device;
       }
       // No active connection for found device
       if (!id_in_vector(found_device->mesh_id, linked_mesh_ids)) {
         ESP_LOGD(TAG, "Try to connecty to device %s [%u] no active connection found for this device",
-                 found_device->device.address_str().c_str(), found_device->mesh_id);
+                 found_device->device.address_str(), found_device->mesh_id);
         return found_device;
       }
     }
@@ -287,7 +287,7 @@ void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   for (auto *found_device : this->found_devices_) {
     if (found_device->rssi > RSSI_NOT_AVAILABLE &&
         this->last_found_device_cleanup - found_device->last_detected > 20000) {
-      ESP_LOGD(TAG, "Clear RSSI for %s [%u] not found the last 20 seconds", found_device->device.address_str().c_str(),
+      ESP_LOGD(TAG, "Clear RSSI for %s [%u] not found the last 20 seconds", found_device->device.address_str(),
                found_device->mesh_id);
       found_device->rssi = RSSI_NOT_AVAILABLE;
     }
@@ -445,7 +445,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   unsigned char G = 0;
   unsigned char B = 0;
 
-  ESP_LOGV(TAG, "Sync %s", group->state_as_string().c_str());
+  ESP_LOGV(TAG, "Sync %s", group->state_as_string());
 
   for (Device *device : group->get_devices()) {
     if (group->device_info == nullptr && device->device_info != nullptr) {
@@ -458,7 +458,7 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
       state = true;
     }
 
-    ESP_LOGV(TAG, "Sync group state, %s", device->state_as_string().c_str());
+    ESP_LOGV(TAG, "Sync group state, %s", device->state_as_string());
     if (first_device) {
       first_device = false;
       all_devices_same_state = true;
@@ -521,16 +521,16 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     group->R = R;
     group->G = G;
     group->B = B;
-    ESP_LOGD(TAG, "Sync group state, %s", group->state_as_string().c_str());
+    ESP_LOGD(TAG, "Sync group state, %s", group->state_as_string());
   } else {
-    ESP_LOGV(TAG, "No sync of group state, %s", group->state_as_string().c_str());
+    ESP_LOGV(TAG, "No sync of group state, %s", group->state_as_string());
   }
 
   this->publish_state(group);
 }
 
 void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
-  ESP_LOGV(TAG, "Publish: %s", mesh_destination->state_as_string().c_str());
+  ESP_LOGV(TAG, "Publish: %s", mesh_destination->state_as_string());
   this->publish_connection->publish_state(mesh_destination);
 
   for (Group *group : mesh_destination->get_groups()) {
@@ -541,7 +541,7 @@ void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
 void AwoxMesh::send_discovery(Device *device) {
   if (!device->address_set()) {
     ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
-             std::to_string(device->mesh_id).c_str());
+             std::to_string(device->mesh_id));
     return;
   }
 
@@ -554,7 +554,7 @@ void AwoxMesh::send_discovery(Device *device) {
 void AwoxMesh::send_group_discovery(Group *group) {
   if (group->device_info == nullptr) {
     ESP_LOGW(TAG, "'%s': Can not yet send discovery, component_type not known...",
-             std::to_string(group->group_id).c_str());
+             std::to_string(group->group_id));
     return;
   }
 
@@ -567,7 +567,7 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
   ESP_LOGD(TAG, "Call connection for %d", dest);
   for (auto *connection : this->connections_) {
     if (connection->get_address() > 0 && connection->mesh_id_linked(dest)) {
-      ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
+      ESP_LOGD(TAG, "Found %s as connection", connection->address_str());
       callback(connection);
 
       // for now we stop on first
