@@ -126,7 +126,7 @@ void MeshConnection::loop() {
 bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                                          esp_ble_gattc_cb_param_t *param) {
   ESP_LOGVV(TAG, "[%u] [%s] gattc_event_handler: event=%d gattc_if=%d", this->connection_index_,
-            this->address_str_.c_str(), event, gattc_if);
+            this->address_str_, event, gattc_if);
 
   if (!esp32_ble_client::BLEClientBase::gattc_event_handler(event, gattc_if, param))
     return false;
@@ -136,7 +136,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
   switch (event) {
     case ESP_GATTC_DISCONNECT_EVT: {
       ESP_LOGD(TAG, "[%u] [%s] ESP_GATTC_DISCONNECT_EVT, reason %d", this->connection_index_,
-               this->address_str_.c_str(), param->disconnect.reason);
+               this->address_str_, param->disconnect.reason);
       if (param->disconnect.reason > 0) {
         this->set_address(0);
       }
@@ -158,12 +158,12 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
       }
       if (param->notify.handle != this->notification_char->handle) {
         ESP_LOGW(TAG, "Unknown notification received from handle %d: %s", param->notify.handle,
-                 string_as_hex_string(std::string((char *) param->notify.value, param->notify.value_len)).c_str());
+                 string_as_hex_string(std::string((char *) param->notify.value, param->notify.value_len)));
         break;
       }
       std::string notification = std::string((char *) param->notify.value, param->notify.value_len);
       std::string packet = this->decrypt_packet(notification);
-      ESP_LOGV(TAG, "Notification received: %s", string_as_hex_string(packet).c_str());
+      ESP_LOGV(TAG, "Notification received: %s", string_as_hex_string(packet));
       this->handle_packet(packet);
       break;
     }
@@ -181,8 +181,8 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
           this->generate_session_key(this->random_key,
                                      std::string((char *) param->read.value, param->read.value_len).substr(1, 9));
 
-          ESP_LOGI(TAG, "[%u] [%s] session key %s", this->get_conn_id(), this->address_str_.c_str(),
-                   string_as_hex_string(this->session_key).c_str());
+          ESP_LOGI(TAG, "[%u] [%s] session key %s", this->get_conn_id(), this->address_str_,
+                   string_as_hex_string(this->session_key));
 
           this->request_status();
 
@@ -194,8 +194,8 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
           ESP_LOGE(TAG, "Unexpected pair value");
         }
 
-        ESP_LOGI(TAG, "[%u] [%s] response %s", this->get_conn_id(), this->address_str_.c_str(),
-                 string_as_hex_string(std::string((char *) param->read.value, param->read.value_len)).c_str());
+        ESP_LOGI(TAG, "[%u] [%s] response %s", this->get_conn_id(), this->address_str_,
+                 string_as_hex_string(std::string((char *) param->read.value, param->read.value_len)));
         this->disconnect();
         this->set_address(0);
       }
@@ -218,21 +218,21 @@ void MeshConnection::setup_connection() {
                                              esp32_ble_tracker::ESPBTUUID::from_raw(uuid_pair_char));
 
   if (this->notification_char == nullptr) {
-    ESP_LOGW(TAG, "[%u] [%s] No BLE Notification character found", this->get_conn_id(), this->address_str_.c_str());
+    ESP_LOGW(TAG, "[%u] [%s] No BLE Notification character found", this->get_conn_id(), this->address_str_);
     this->disconnect();
     this->set_address(0);
     return;
   }
 
   if (this->command_char == nullptr) {
-    ESP_LOGW(TAG, "[%u] [%s] No BLE Command character found", this->get_conn_id(), this->address_str_.c_str());
+    ESP_LOGW(TAG, "[%u] [%s] No BLE Command character found", this->get_conn_id(), this->address_str_);
     this->disconnect();
     this->set_address(0);
     return;
   }
 
   if (this->pair_char == nullptr) {
-    ESP_LOGW(TAG, "[%u] [%s] No BLE Pair character found", this->get_conn_id(), this->address_str_.c_str());
+    ESP_LOGW(TAG, "[%u] [%s] No BLE Pair character found", this->get_conn_id(), this->address_str_);
     this->disconnect();
     this->set_address(0);
     return;
@@ -249,7 +249,7 @@ void MeshConnection::setup_connection() {
                                              ESP_GATT_AUTH_REQ_NONE);
 
   if (status != ESP_OK) {
-    ESP_LOGW(TAG, "[%u] [%s] esp_ble_gattc_read_char failed, error=%d", this->get_conn_id(), this->address_str_.c_str(),
+    ESP_LOGW(TAG, "[%u] [%s] esp_ble_gattc_read_char failed, error=%d", this->get_conn_id(), this->address_str_,
              status);
     this->disconnect();
     this->set_address(0);
@@ -261,7 +261,7 @@ void MeshConnection::setup_connection() {
       esp_ble_gattc_register_for_notify(this->get_gattc_if(), this->get_remote_bda(), this->notification_char->handle);
   if (status) {
     ESP_LOGW(TAG, "[%u] [%s] esp_ble_gattc_register_for_notify failed, status=%d", this->get_conn_id(),
-             this->address_str_.c_str(), status);
+             this->address_str_, status);
     this->disconnect();
     this->set_address(0);
     return;
@@ -277,7 +277,7 @@ void MeshConnection::setup_connection() {
 
 std::string MeshConnection::combine_name_and_password() const {
   std::string data;
-  ESP_LOGD(TAG, "combine mesh name + password: %s:%s", this->mesh_name.c_str(), this->mesh_password.c_str());
+  ESP_LOGD(TAG, "combine mesh name + password: %s:%s", this->mesh_name, this->mesh_password);
   std::string mesh_name = this->mesh_name;
   std::string mesh_password = this->mesh_password;
   mesh_name.append(16 - mesh_name.size(), 0);
@@ -383,7 +383,7 @@ void MeshConnection::handle_packet(std::string &packet) {
              "temp: %d, "
              "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
              mesh_id, state, color_mode, sequence_mode, candle_mode, white_brightness, temperature, color_brightness, R,
-             G, B, mode, std::bitset<8>(mode).to_string().c_str());
+             G, B, mode, std::bitset<8>(mode).to_string());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_STATUS_REPORT) {  // DB
     mode = static_cast<unsigned char>(packet[10]);
@@ -407,7 +407,7 @@ void MeshConnection::handle_packet(std::string &packet) {
              "status report: mesh: %d, on: %d, color_mode: %d, sequence_mode: %d, candle_mode: %d, w_b: %d, temp: %d, "
              "c_b: %d, rgb: %02X%02X%02X, mode: %d %s",
              mesh_id, state, color_mode, sequence_mode, candle_mode, white_brightness, temperature, color_brightness, R,
-             G, B, mode, std::bitset<8>(mode).to_string().c_str());
+             G, B, mode, std::bitset<8>(mode).to_string());
 
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
@@ -423,7 +423,7 @@ void MeshConnection::handle_packet(std::string &packet) {
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
 
     ESP_LOGD(TAG, "MAC report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
-             device->address_str().c_str());
+             device->address_str());
 
     this->mesh_->send_discovery(device);
     return;
@@ -447,7 +447,7 @@ void MeshConnection::handle_packet(std::string &packet) {
   } else {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
     ESP_LOGW(TAG, "Unknown report, dev [%u]: command %02X => %s", mesh_id, static_cast<unsigned char>(packet[7]),
-             string_as_hex_string(packet).c_str());
+             string_as_hex_string(packet));
 
     return;
   }
@@ -486,7 +486,7 @@ void MeshConnection::handle_packet(std::string &packet) {
   device->last_online = esphome::millis();
 
   // todo move logic below to mesh or mqtt class
-  ESP_LOGI(TAG, device->state_as_string().c_str());
+  ESP_LOGI(TAG, device->state_as_string());
   this->mesh_->publish_state(device);
 
   if (online_changed) {
@@ -535,7 +535,7 @@ std::string MeshConnection::build_packet(int dest, int command, const std::strin
 All multi-byte elements are in little-endian form.
 Packet counter runs between 1 and 0xffff.
 */
-  ESP_LOGV(TAG, "command: %d, data: %s, dest: %d", command, string_as_hex_string(data).c_str(), dest);
+  ESP_LOGV(TAG, "command: %d, data: %s, dest: %d", command, string_as_hex_string(data), dest);
   std::string packet;
   packet.resize(20, 0);
   packet[0] = this->packet_count & 0xff;
@@ -548,8 +548,8 @@ Packet counter runs between 1 and 0xffff.
   for (int i = 0; i < data.size(); i++)
     packet[i + 10] = data[i];
 
-  // ESP_LOGI(TAG, "[%u] [%s] packet (packet_count+dest+command) %s", this->get_conn_id(), this->address_str_.c_str(),
-  //          string_as_binary_string(packet).c_str());
+  // ESP_LOGI(TAG, "[%u] [%s] packet (packet_count+dest+command) %s", this->get_conn_id(), this->address_str_,
+  //          string_as_binary_string(packet));
 
   std::string enc_packet = this->encrypt_packet(packet);
 
@@ -568,8 +568,8 @@ void MeshConnection::queue_command(int command, const std::string &data, int des
 }
 
 bool MeshConnection::write_command(int command, const std::string &data, int dest, bool withResponse) {
-  ESP_LOGD(TAG, "[%u] [%s] [%u] write_command packet %02X => %s", this->get_conn_id(), this->address_str_.c_str(), dest,
-           command, string_as_hex_string(data).c_str());
+  ESP_LOGD(TAG, "[%u] [%s] [%u] write_command packet %02X => %s", this->get_conn_id(), this->address_str_, dest,
+           command, string_as_hex_string(data));
   std::string packet = this->build_packet(dest, command, data);
   // todo: withResponse
   auto status = this->command_char->write_value((uint8_t *) packet.data(), packet.size());
@@ -579,7 +579,7 @@ bool MeshConnection::write_command(int command, const std::string &data, int des
 
 void MeshConnection::request_status() {
   if (this->connected()) {
-    ESP_LOGD(TAG, "[%u] [%s] request status update", this->get_conn_id(), this->address_str_.c_str());
+    ESP_LOGD(TAG, "[%u] [%s] request status update", this->get_conn_id(), this->address_str_);
     this->write_command(C_REQUEST_STATUS, {0x10}, 0xffff);
   }
 }
