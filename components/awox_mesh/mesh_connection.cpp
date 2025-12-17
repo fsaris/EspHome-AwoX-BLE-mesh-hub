@@ -24,8 +24,8 @@ static const char *const TAG = "awox.connection";
  *  \returns the encrypted data string.
  */
 static std::string encrypt(std::string key, std::string data) {
-  // ESP_LOGD(TAG, "encrypt [key: %s, data: %s] data length [%u]", string_as_binary_string(key).c_str(),
-  //          string_as_binary_string(data).c_str(), data.size());
+  // ESP_LOGD(TAG, "encrypt [key: %s, data: %s] data length [%u]", string_as_binary_string(key),
+  //          string_as_binary_string(data), data.size());
 
   std::reverse(key.begin(), key.end());
   std::reverse(data.begin(), data.end());
@@ -34,14 +34,14 @@ static std::string encrypt(std::string key, std::string data) {
 
   esp_aes_context aes;
   esp_aes_init(&aes);
-  esp_aes_setkey(&aes, (const unsigned char *) key.c_str(), key.size() * 8);
-  esp_aes_crypt_ecb(&aes, 1, (const unsigned char *) data.c_str(), buffer);
+  esp_aes_setkey(&aes, (const unsigned char *) key, key.size() * 8);
+  esp_aes_crypt_ecb(&aes, 1, (const unsigned char *) data, buffer);
   esp_aes_free(&aes);
 
   std::string result = std::string((char *) buffer, 16);
 
   std::reverse(result.begin(), result.end());
-  // ESP_LOGD(TAG, "encrypted [%s]", string_as_binary_string(result).c_str());
+  // ESP_LOGD(TAG, "encrypted [%s]", string_as_binary_string(result));
 
   return result;
 }
