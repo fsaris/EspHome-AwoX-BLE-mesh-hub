@@ -206,12 +206,12 @@ void AwoxMesh::disconnect_connection_with_overlapping_mesh_ids(const int a, cons
   }
   if (this->connections_[a]->get_linked_mesh_ids().size() > this->connections_[b]->get_linked_mesh_ids().size()) {
     ESP_LOGI(TAG, "Disconnect connection %u [%s] due to overlapping mesh_id's with other connection", b,
-             this->connections_[b]->address_str().c_str());
+             this->connections_[b]->address_str());
     this->connections_[b]->clear_linked_mesh_ids();
     this->connections_[b]->disconnect();
   } else {
     ESP_LOGI(TAG, "Disconnect connection %u [%s] due to overlapping mesh_id's with other connection", a,
-             this->connections_[a]->address_str().c_str());
+             this->connections_[a]->address_str());
     this->connections_[a]->clear_linked_mesh_ids();
     this->connections_[a]->disconnect();
   }
@@ -567,7 +567,7 @@ void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &
   ESP_LOGD(TAG, "Call connection for %d", dest);
   for (auto *connection : this->connections_) {
     if (connection->get_address() > 0 && connection->mesh_id_linked(dest)) {
-      ESP_LOGD(TAG, "Found %s as connection", connection->address_str().c_str());
+      ESP_LOGD(TAG, "Found %s as connection", connection->address_str());
       callback(connection);
 
       // for now we stop on first
