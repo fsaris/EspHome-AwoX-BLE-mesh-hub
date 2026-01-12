@@ -98,4 +98,3 @@ awox_mesh:
       name: Spot 120
       model: EGLOSpot 120/w
       icon: mdi:wall-sconce-flat
-name_add_mac_suffix: false # https://github.com/esphome/issues/issues/6989
