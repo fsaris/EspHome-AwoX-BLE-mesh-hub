@@ -1,6 +1,7 @@
 esphome:
   name: awox-ble-mesh-hub
   friendly_name: "AwoX BLE mesh hub"
+  name_add_mac_suffix: false # Don't break mqtt # https://github.com/esphome/issues/issues/6989
 
 esp32:
   # Match this with the board your using
