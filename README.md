@@ -1,6 +1,6 @@
 # ESPHome component: AwoX BLE mesh (mqtt) hub
 
-A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
+An ESPhome [component](https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
@@ -856,6 +856,7 @@ The product icon used for example in HomeAssistent as device icon.
 
 ###### _Example value: `mdi:wall-sconce-flat`_
 
+---
 
 ### General YAML / Setup remarks
 
@@ -865,6 +866,26 @@ The product icon used for example in HomeAssistent as device icon.
 #### Hidden SSID WLAN
 In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
 
+### Poor connection
+
+**My AwoX device is discovered, but it won't connect**
+
+BLE is far more sensitive to precise timing than Wi-Fi. Receiving BLE advertisements is easy, but responding and completing a connection handshake is much harder. The ESP32 is not optimized for Bluetooth, and many (especially cheaper) ESP32 development boards are designed for prototyping rather than production use. As a result, they often have hardware limitations that severely degrade BLE reliability:
+
+1. **CH340 USB-to-UART chips** inject noise onto the 5V rail
+2. **AMS1117 and similar LDOs** have slow transient response and poor high-frequency PSRR
+3. **BLE shares the 2.4 GHz radio with Wi-Fi**, introducing timing jitter
+4. Some **AwoX devices are particularly strict** about BLE timing
+
+Because of this, before reporting bugs, the ESP32 **must be placed within 50 cm of an AwoX mesh device** to reliably complete connection handshakes.
+
+Once everything is working, you can try increasing the distance. To maximize BLE stability (ranked by feasibility):
+
+1. Power the board via **VIN (5V) and GND** to [avoid noise from the CH340](https://community.home-assistant.io/t/something-is-very-wrong-with-the-wifi-on-the-esp32-boards-i-ordered-from-aliexpress-is-there-any-way-to-salvage-these-and-fix-the-wifi/477631), or even better:
+2. Power directly via **3.3V and GND** to [bypass the AMS1117](https://www.reddit.com/r/esp32/comments/1m7ne4i/psa_avoid_using_the_ams1117_ldo_for_esp32_projects/) entirely (from a high-quality 3.3V power source)
+3. Use a board with an **external antenna**
+4. Use a **named brand** with high quality components
+5. Use an **Ethernet-based ESP32 board**, so [BLE does not share the radio](https://esp32.com/viewtopic.php?t=6707) with Wi-Fi (PoE is even better)
 
 ### Requirements
 - ESP32 module
