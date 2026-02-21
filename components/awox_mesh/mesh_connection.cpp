@@ -423,7 +423,7 @@ void MeshConnection::handle_packet(std::string &packet) {
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
 
     ESP_LOGD(TAG, "MAC report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
-             device->address_str());
+             device->address_str().c_str());
 
     this->mesh_->send_discovery(device);
     return;
