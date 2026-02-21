@@ -144,7 +144,7 @@ bool MeshConnection::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if
     }
     case ESP_GATTC_SEARCH_CMPL_EVT:
     case ESP_GATTC_OPEN_EVT: {
-      if (this->state_ == esp32_ble_tracker::ClientState::ESTABLISHED) {
+      if (this->state() == esp32_ble_tracker::ClientState::ESTABLISHED) {
         ESP_LOGI(TAG, "Connected....");
         this->setup_connection();
       }
