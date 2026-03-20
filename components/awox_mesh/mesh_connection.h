@@ -4,7 +4,6 @@
 #include <cstring>
 #include <bitset>
 #include <deque>
-#include <deque>
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/log.h"
