@@ -2,7 +2,6 @@
 #include <bitset>
 #include <algorithm>
 #include <math.h>
-#include <deque>
 #include "mesh_connection.h"
 #include "awox_mesh.h"
 #include "device_info.h"
