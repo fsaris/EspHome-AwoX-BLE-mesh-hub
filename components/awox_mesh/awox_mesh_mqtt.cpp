@@ -307,11 +307,11 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
   }
 }
 
-void AwoxMeshMqtt::send_discovery(Device *device) {
+bool AwoxMeshMqtt::send_discovery(Device *device) {
   if (!device->address_set() || device->device_info == nullptr) {
     ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
              std::to_string(device->mesh_id).c_str());
-    return;
+    return false;
   }
 
   ESP_LOGD(TAG, "[%u]: Sending discovery productID: 0x%02X (%s - %s) mac: %s", device->mesh_id,
@@ -320,7 +320,7 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
 
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
 
-  global_mqtt_client->publish_json(
+  const bool published = global_mqtt_client->publish_json(
       this->get_discovery_topic_(discovery_info, device),
       [this, device, discovery_info](JsonObject root) {
         root["schema"] = "json";
@@ -403,6 +403,10 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
       },
       0, discovery_info.retain);
 
+  if (!published) {
+    return false;
+  }
+
   if (device->device_info->has_feature(FEATURE_LIGHT_MODE)) {
     global_mqtt_client->subscribe_json(
         this->get_mqtt_topic_for_(device, "command"),
@@ -431,6 +435,7 @@ void AwoxMeshMqtt::send_discovery(Device *device) {
                                   });
   }
   this->publish_availability(device);
+  return true;
 }
 
 void AwoxMeshMqtt::send_group_discovery(Group *group) {

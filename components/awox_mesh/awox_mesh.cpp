@@ -546,9 +546,9 @@ void AwoxMesh::send_discovery(Device *device) {
   }
 
   device->device_info = this->device_info_resolver->get_by_product_id(device->product_id);
-  device->send_discovery = true;
-
-  this->publish_connection->send_discovery(device);
+  if (this->publish_connection->send_discovery(device)) {
+    device->send_discovery = true;
+  }
 }
 
 void AwoxMesh::send_group_discovery(Group *group) {
