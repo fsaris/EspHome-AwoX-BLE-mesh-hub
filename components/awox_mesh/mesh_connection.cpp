@@ -364,7 +364,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     mesh_id = (static_cast<unsigned char>(packet[19]) * 256) + static_cast<unsigned char>(packet[10]);
     mode = static_cast<unsigned char>(packet[12]);
 
-    online = packet[11] > 0;
+    online = packet[11] != 0;
     state = (mode & 1) == 1;
     color_mode = ((mode >> 1) & 1) == 1;
     sequence_mode = ((mode >> 2) & 1) == 1;
