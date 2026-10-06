@@ -539,6 +539,10 @@ void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
 }
 
 void AwoxMesh::send_discovery(Device *device) {
+  if (device->send_discovery) {
+    return;
+  }
+
   if (!device->address_set()) {
     ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
              std::to_string(device->mesh_id).c_str());
@@ -546,9 +550,9 @@ void AwoxMesh::send_discovery(Device *device) {
   }
 
   device->device_info = this->device_info_resolver->get_by_product_id(device->product_id);
-  device->send_discovery = true;
-
-  this->publish_connection->send_discovery(device);
+  if (this->publish_connection->send_discovery(device)) {
+    device->send_discovery = true;
+  }
 }
 
 void AwoxMesh::send_group_discovery(Group *group) {

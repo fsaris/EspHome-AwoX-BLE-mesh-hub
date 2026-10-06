@@ -863,7 +863,7 @@ The product icon used for example in HomeAssistent as device icon.
 - Use the `esp-idf` as framework type
 
 #### Hidden SSID WLAN
-In case of using a WLAN with hidden SSID, mind to use the multiple netowrk option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
+In case of using a WLAN with hidden SSID, mind to use the multiple network option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
 
 
 ### Requirements

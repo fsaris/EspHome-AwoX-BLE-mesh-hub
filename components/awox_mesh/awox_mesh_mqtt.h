@@ -38,7 +38,7 @@ class AwoxMeshMqtt {
 
   void publish_availability(Device *device);
   void publish_availability(Group *group);
-  void send_discovery(Device *device);
+  bool send_discovery(Device *device);
   void send_group_discovery(Group *group);
   void publish_connection_sensor_discovery(const std::vector<MeshConnection *> &connections);
   void publish_connected(int active_connections, int online_devices, const std::vector<MeshConnection *> &connections);

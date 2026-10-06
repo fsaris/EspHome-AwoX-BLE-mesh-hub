@@ -364,7 +364,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     mesh_id = (static_cast<unsigned char>(packet[19]) * 256) + static_cast<unsigned char>(packet[10]);
     mode = static_cast<unsigned char>(packet[12]);
 
-    online = packet[11] > 0;
+    online = packet[11] != 0;
     state = (mode & 1) == 1;
     color_mode = ((mode >> 1) & 1) == 1;
     sequence_mode = ((mode >> 2) & 1) == 1;
@@ -423,6 +423,26 @@ void MeshConnection::handle_packet(std::string &packet) {
         get_product_code(static_cast<unsigned char>(packet[11]), static_cast<unsigned char>(packet[12]));
 
     ESP_LOGD(TAG, "MAC report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
+             device->address_str().c_str());
+
+    this->mesh_->send_discovery(device);
+    return;
+  } else if (static_cast<unsigned char>(packet[7]) == COMMAND_DEVICE_INFO_REPORT && packet.size() >= 16 &&
+             static_cast<unsigned char>(packet[10]) == 0x10) {
+    mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
+    device = this->mesh_->get_device(mesh_id);
+    if (device == nullptr) {
+      ESP_LOGD(TAG, "Device info report, dev [%u] ignored. MeshID not part of allowed_mesh_ids", mesh_id);
+      return;
+    }
+
+    // The 0xEB report carries the product ID and reversed MAC suffix after its 0x10 report marker.
+    device->product_id =
+        get_product_code(static_cast<unsigned char>(packet[10]), static_cast<unsigned char>(packet[11]));
+    device->set_address(static_cast<unsigned char>(packet[15]), static_cast<unsigned char>(packet[14]),
+                        static_cast<unsigned char>(packet[13]), static_cast<unsigned char>(packet[12]));
+
+    ESP_LOGD(TAG, "Device info report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
              device->address_str().c_str());
 
     this->mesh_->send_discovery(device);
