@@ -18,16 +18,16 @@ class MeshDestination {
   bool color_mode = false;
   bool sequence_mode = false;
   bool candle_mode = false;
-  unsigned char white_brightness;
-  unsigned char temperature;
-  unsigned char color_brightness;
-  unsigned char R;
-  unsigned char G;
-  unsigned char B;
+  unsigned char white_brightness = 0;
+  unsigned char temperature = 0;
+  unsigned char color_brightness = 0;
+  unsigned char R = 0;
+  unsigned char G = 0;
+  unsigned char B = 0;
 
-  bool online;
+  bool online = false;
   bool send_discovery = false;
-  DeviceInfo *device_info;
+  DeviceInfo *device_info = nullptr;
 
   virtual int dest();
   virtual const char *type() const;
