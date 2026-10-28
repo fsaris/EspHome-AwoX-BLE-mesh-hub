@@ -866,8 +866,39 @@ The product icon used for example in HomeAssistent as device icon.
 In case of using a WLAN with hidden SSID, mind to use the multiple network option, to define the hidden variable of the wifi network: [Connecting to Multiple Networks](https://esphome.io/components/wifi.html#connecting-to-multiple-networks)
 
 
+#### Ethernet instead of Wi-Fi (ESP32-S3, Seeed XIAO W5500 Ethernet Adapter)
+
+The component does not use Wi-Fi itself, only MQTT, so the hub can run on a wired connection. A ready-to-use example for the
+[Seeed Studio XIAO W5500 Ethernet Adapter](https://wiki.seeedstudio.com/xiao_w5500_ethernet_adapter/) (XIAO ESP32-S3 Plus + WIZnet W5500, powered by PoE or USB-C)
+is in [awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml](awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml).
+
+Differences from the default [awox-ble-mesh-hub.yaml](awox-ble-mesh-hub.yaml):
+
+- `board: seeed_xiao_esp32s3` and `variant: esp32s3` (see the [PlatformIO board](https://docs.platformio.org/en/latest/boards/espressif32/seeed_xiao_esp32s3.html))
+- the `wifi:` section is replaced by an `ethernet:` section of type `W5500` with the pins from the
+  [Seeed ESPHome guide](https://wiki.seeedstudio.com/esphome_xiao_w5500_ethernet_adapter/):
+
+  ```yaml
+  ethernet:
+    type: W5500
+    clk_pin: GPIO7
+    mosi_pin: GPIO9
+    miso_pin: GPIO8
+    cs_pin: GPIO2
+    interrupt_pin: GPIO10
+  ```
+
+Remarks:
+
+- Seeed documents the ESPHome setup only for boards produced after November 1st 2025 (hardware revision V1.2, which fixed the `INT` pin wiring). Check the pins against the schematic if the Ethernet link does not come up with an older board.
+- The first flash has to be done over USB-C. Afterwards `esphome upload --device <ip-address>` works over Ethernet. The `.local` mDNS name is not resolved across VLANs/subnets, use the IP address.
+- The W5500 sends untagged frames. If you use VLANs, plug the board into an access port of the VLAN where your MQTT broker is reachable.
+- Without PoE the board needs 5 V on USB-C; a plain Ethernet cable only carries data.
+- Without a cable the log shows `Connecting failed; reconnecting` every 15 seconds. This is normal and does not mean the pins are wrong.
+- Other boards with a W5500 use the same [`ethernet:`](https://esphome.io/components/ethernet/) component, with their own board, variant and pins.
+
 ### Requirements
-- ESP32 module
+- ESP32 module (Wi-Fi or Ethernet; the ESP32-S3 with a W5500 is described [above](#ethernet-instead-of-wi-fi-esp32-s3-seeed-xiao-w5500-ethernet-adapter))
 - ESPHome 2025.12.0 or newer
 - MQTT broker
 

@@ -1,0 +1,75 @@
+# Example for the Seeed Studio XIAO W5500 Ethernet Adapter (XIAO ESP32-S3 Plus + WIZnet W5500, PoE)
+# https://wiki.seeedstudio.com/xiao_w5500_ethernet_adapter/
+#
+# Same as awox-ble-mesh-hub.yaml, but the hub is connected with a cable instead of Wi-Fi.
+# The board has no `wifi:` section here; BLE gets the whole 2.4 GHz radio.
+esphome:
+  name: awox-ble-mesh-hub
+  friendly_name: "AwoX BLE mesh hub"
+  name_add_mac_suffix: false # Don't break mqtt # https://github.com/esphome/issues/issues/6989
+  min_version: 2025.12.0
+
+esp32:
+  board: seeed_xiao_esp32s3
+  variant: esp32s3
+  framework:
+    # Be sure to "Clean Build Files" when switching framework
+    type: esp-idf
+
+# Enable logging
+logger:
+  #level: VERY_VERBOSE
+
+mqtt:
+  broker: !secret mqtt_host
+  username: !secret mqtt_user
+  password: !secret mqtt_password
+
+  # Disable retained discovery messages until you are got the config correct
+  discovery_retain: False
+
+# Disable Home Assistant API to prevent frequent MQTT disconnections
+#api:
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# W5500 SPI wiring of the XIAO W5500 Ethernet Adapter
+ethernet:
+  type: W5500
+  clk_pin: GPIO7 # D8
+  mosi_pin: GPIO9 # D10
+  miso_pin: GPIO8 # D9
+  cs_pin: GPIO2 # D1
+  interrupt_pin: GPIO10 # D16 (INT wiring fixed in board revision V1.2)
+  # reset_pin: not connected on this board
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub
+      ref: main
+  #  ref: dev
+  # - source:
+  #     type: local
+  #     path: components
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+
+awox_mesh:
+  mesh_name: !secret mesh_name
+  mesh_password: !secret mesh_password
+
+  # See awox-ble-mesh-hub.yaml and the README for all optional options
+
+  device_info:
+    # Example device type, see device info in HomeAssistant or MQTT message to find the 'product_id'
+    - product_id: 0x32
+      device_type: RGB
+      manufacturer: EGLO
+      name: Spot 120
+      model: EGLOSpot 120/w
+      icon: mdi:wall-sconce-flat
