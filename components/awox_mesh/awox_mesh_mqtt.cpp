@@ -445,6 +445,12 @@ void AwoxMeshMqtt::send_group_discovery(Group *group) {
     return;
   }
 
+  // Ignore groups that don't represent lights (for example plug-only groups).
+  if (!group->device_info->has_feature(FEATURE_LIGHT_MODE)) {
+    ESP_LOGI(TAG, "[%u] Non-light group ignored", group->group_id);
+    return;
+  }
+
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
 
   global_mqtt_client->publish_json(
