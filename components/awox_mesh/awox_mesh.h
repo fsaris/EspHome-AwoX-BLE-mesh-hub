@@ -167,7 +167,7 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void request_device_info(Device *device);
   void request_status_update(int dest);
 
-  void publish_power_measurement(Device *device);
+  void request_power_measurement(Device *device);
 };
 
 }  // namespace awox_mesh
