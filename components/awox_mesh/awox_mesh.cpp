@@ -105,9 +105,32 @@ void AwoxMesh::setup() {
 
   this->publish_connection->publish_connection_sensor_discovery(this->connections_);
 
-  this->set_interval("publish_connection", 5000, [this]() { this->publish_connected(); });
-}
+  this->set_interval("publish_connection", 5000, [this]() {
+    this->publish_connected();
+  });
 
+  this->set_interval("plug_power_measurement", 5000, [this]() {
+    for (auto *device : this->mesh_devices_) {
+      if (device == nullptr) {
+        continue;
+      }
+
+      if (!device->online) {
+        continue;
+      }
+
+      if (device->device_info == nullptr) {
+        continue;
+      }
+
+      const int product_id = device->device_info->get_product_id();
+
+      if (product_id == 0x63 || product_id == 0x85) {
+        this->request_power_measurement(device);
+      }
+    }
+  });
+}
 bool AwoxMesh::start_up_delay_done() {
   return esphome::millis() - this->start > 10000 && this->found_devices_.size() > 0;
 }
@@ -603,6 +626,18 @@ void AwoxMesh::request_device_info(Device *device) {
     connection->request_group_info(device);
     // connection->request_device_version(device->mesh_id);
   });
+}
+void AwoxMesh::request_power_measurement(Device *device) {
+  this->call_connection(device->mesh_id, [device](MeshConnection *connection) {
+    connection->request_power_measurement(device->mesh_id);
+  });
+}
+void AwoxMesh::publish_power_measurement(Device *device) {
+  if (device == nullptr) {
+    return;
+  }
+
+  this->publish_connection->publish_power_measurement(device);
 }
 
 void AwoxMesh::set_power(int dest, bool state) {
