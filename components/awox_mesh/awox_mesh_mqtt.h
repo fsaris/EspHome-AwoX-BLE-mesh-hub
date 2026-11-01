@@ -43,6 +43,9 @@ class AwoxMeshMqtt {
   void publish_connection_sensor_discovery(const std::vector<MeshConnection *> &connections);
   void publish_connected(int active_connections, int online_devices, const std::vector<MeshConnection *> &connections);
   void publish_state(MeshDestination *mesh_destination);
+
+  void send_power_measurement_discovery(Device *device);
+  void publish_power_measurement(Device *device);
 };
 
 }  // namespace awox_mesh
