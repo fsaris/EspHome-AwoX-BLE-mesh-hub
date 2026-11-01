@@ -145,6 +145,8 @@ class MeshConnection : public esp32_ble_client::BLEClientBase {
 
   void request_group_info(Device *device);
 
+  void request_power_measurement(int dest);
+
   bool request_device_version(int dest);
 
   void connect_to(FoundDevice *found_device);
