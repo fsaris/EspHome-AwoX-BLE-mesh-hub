@@ -500,7 +500,7 @@ void AwoxMeshMqtt::send_power_measurement_discovery(Device *device) {
         auto availability_topic_1 = availability.add<JsonObject>();
         availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
 
-        auto availability_topic_();
+        auto availability_topic_2 = availability.add<JsonObject>();
         availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
 
         auto availability_topic_3 = availability.add<JsonObject>();
