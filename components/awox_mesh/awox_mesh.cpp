@@ -53,11 +53,12 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
     return _f->device.address_uint64() == device.address_uint64();
   });
 
+  char addr_buf[MAC_ADDRESS_PRETTY_BUFFER_SIZE];
   if (found != found_devices_.end()) {
     found_device = found_devices_.at(found - found_devices_.begin());
-    ESP_LOGV(TAG, "Found existing device: %s", found_device->device.address_str().c_str());
+    ESP_LOGV(TAG, "Found existing device: %s", found_device->device.address_str_to(addr_buf));
   } else {
-    ESP_LOGV(TAG, "Register device: %s", device.address_str().c_str());
+    ESP_LOGV(TAG, "Register device: %s", device.address_str_to(addr_buf));
     found_device = new FoundDevice();
     found_device->device = device;
     this->found_devices_.push_back(found_device);
@@ -74,22 +75,25 @@ FoundDevice *AwoxMesh::add_to_found_devices(const esp32_ble_tracker::ESPBTDevice
 }
 
 bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  if (device.address_str().rfind(this->address_prefix, 0) != 0) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(),
-             device.address_str().c_str(), (int) device.get_rssi());
+  char addr_buf[MAC_ADDRESS_PRETTY_BUFFER_SIZE];
+  const char *addr_str = device.address_str_to(addr_buf);
+
+  if (strncmp(addr_str, this->address_prefix.c_str(), this->address_prefix.size()) != 0) {
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, address_prefix mismatch", device.get_name().c_str(), addr_str,
+             (int) device.get_rssi());
     return false;
   }
 
   if (!this->mac_addresses_allowed(device.address_uint64())) {
-    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(),
-             device.address_str().c_str(), (int) device.get_rssi());
+    ESP_LOGV(TAG, "Skipped device %s - %s. RSSI: %d, not in mac_addresses_allowed", device.get_name().c_str(), addr_str,
+             (int) device.get_rssi());
     return false;
   }
 
   add_to_found_devices(device);
 
-  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(),
-           device.address_str().c_str(), (int) device.get_rssi(), this->found_devices_.size());
+  ESP_LOGV(TAG, "Found Awox device %s - %s. RSSI: %d dB (total devices: %d)", device.get_name().c_str(), addr_str,
+           (int) device.get_rssi(), this->found_devices_.size());
 
   return true;
 }
@@ -134,13 +138,14 @@ void AwoxMesh::loop() {
           break;
         }
 
+        char addr_buf[MAC_ADDRESS_PRETTY_BUFFER_SIZE];
         if (found_device->connected) {
           ESP_LOGI(TAG, "Skipped to connect %s => rssi: %d already connected!!",
-                   found_device->device.address_str().c_str(), (int) found_device->rssi);
+                   found_device->device.address_str_to(addr_buf), (int) found_device->rssi);
           break;
         }
 
-        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str().c_str(),
+        ESP_LOGI(TAG, "Try to connect %s => rssi: %d", found_device->device.address_str_to(addr_buf),
                  (int) found_device->rssi);
 
         connection->connect_to(found_device);
@@ -160,7 +165,8 @@ void AwoxMesh::loop() {
   }
 
   while (!this->delayed_availability_publish.empty()) {
-    if (this->delayed_availability_publish.front().time > esphome::millis() - this->delayed_availability_publish_debounce_time_ms) {
+    if (this->delayed_availability_publish.front().time >
+        esphome::millis() - this->delayed_availability_publish_debounce_time_ms) {
       break;
     }
 
@@ -223,11 +229,12 @@ void AwoxMesh::sort_devices() {
 }
 
 FoundDevice *AwoxMesh::next_to_connect() {
+  char addr_buf[MAC_ADDRESS_PRETTY_BUFFER_SIZE];
   for (auto *found_device : this->found_devices_) {
     if (found_device->mesh_id == 0) {
       Device *device = this->get_device(found_device->device.address_uint64());
       if (device != nullptr) {
-        ESP_LOGD(TAG, "Set mesh_id %u for device %s", device->mesh_id, found_device->device.address_str().c_str());
+        ESP_LOGD(TAG, "Set mesh_id %u for device %s", device->mesh_id, found_device->device.address_str_to(addr_buf));
         found_device->mesh_id = device->mesh_id;
       }
     }
@@ -235,7 +242,7 @@ FoundDevice *AwoxMesh::next_to_connect() {
 
   ESP_LOGD(TAG, "Total devices: %d", this->found_devices_.size());
   for (auto *found_device : this->found_devices_) {
-    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %d", found_device->device.address_str().c_str(),
+    ESP_LOGD(TAG, "Available device %s [%u] => rssi: %d", found_device->device.address_str_to(addr_buf),
              found_device->mesh_id, (int) found_device->rssi);
   }
 
@@ -267,13 +274,14 @@ FoundDevice *AwoxMesh::next_to_connect() {
     if (!found_device->connected && found_device->rssi >= this->minimum_rssi) {
       // unknown mesh_id then the device is definitly not in reach of our current connection
       if (found_device->mesh_id == 0) {
-        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet", found_device->device.address_str().c_str());
+        ESP_LOGD(TAG, "Try to connecty to device %s no mesh id known yet",
+                 found_device->device.address_str_to(addr_buf));
         return found_device;
       }
       // No active connection for found device
       if (!id_in_vector(found_device->mesh_id, linked_mesh_ids)) {
         ESP_LOGD(TAG, "Try to connecty to device %s [%u] no active connection found for this device",
-                 found_device->device.address_str().c_str(), found_device->mesh_id);
+                 found_device->device.address_str_to(addr_buf), found_device->mesh_id);
         return found_device;
       }
     }
@@ -284,11 +292,12 @@ FoundDevice *AwoxMesh::next_to_connect() {
 
 void AwoxMesh::set_rssi_for_devices_that_are_not_available() {
   this->last_found_device_cleanup = esphome::millis();
+  char addr_buf[MAC_ADDRESS_PRETTY_BUFFER_SIZE];
   for (auto *found_device : this->found_devices_) {
     if (found_device->rssi > RSSI_NOT_AVAILABLE &&
         this->last_found_device_cleanup - found_device->last_detected > 20000) {
-      ESP_LOGD(TAG, "Clear RSSI for %s [%u] not found the last 20 seconds", found_device->device.address_str().c_str(),
-               found_device->mesh_id);
+      ESP_LOGD(TAG, "Clear RSSI for %s [%u] not found the last 20 seconds",
+               found_device->device.address_str_to(addr_buf), found_device->mesh_id);
       found_device->rssi = RSSI_NOT_AVAILABLE;
     }
   }
