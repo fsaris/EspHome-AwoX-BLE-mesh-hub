@@ -434,8 +434,114 @@ bool AwoxMeshMqtt::send_discovery(Device *device) {
                                     }
                                   });
   }
+
+    const int product_id = device->device_info->get_product_id();
+
+  if (product_id == 0x63 || product_id == 0x85) {
+    this->send_power_measurement_discovery(device);
+  }
+
+  
   this->publish_availability(device);
   return true;
+}
+
+void AwoxMeshMqtt::send_power_measurement_discovery(Device *device) {
+  if (!device->address_set() || device->device_info == nullptr) {
+    return;
+  }
+
+  const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
+
+  global_mqtt_client->publish_json(
+      discovery_info.prefix + "/sensor/awox-" + device->address_str_hex_only() + "-power/config",
+      [this, device](JsonObject root) {
+        root[MQTT_NAME] = "Power";
+        root[MQTT_UNIQUE_ID] = "awox-" + device->address_str() + "-power";
+        root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(device, "power");
+        root["device_class"] = "power";
+        root["state_class"] = "measurement";
+        root["unit_of_measurement"] = "W";
+        root[MQTT_ICON] = "mdi:flash";
+
+        JsonArray availability = root[MQTT_AVAILABILITY].to<JsonArray>();
+
+        auto availability_topic_1 = availability.add<JsonObject>();
+        availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
+
+        auto availability_topic_2 = availability.add<JsonObject>();
+        availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+
+        auto availability_topic_3 = availability.add<JsonObject>();
+        availability_topic_3[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connected";
+
+        root[MQTT_AVAILABILITY_MODE] = "all";
+
+        JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
+        JsonArray identifiers = device_info[MQTT_DEVICE_IDENTIFIERS].to<JsonArray>();
+        identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
+        identifiers.add(device->address_str());
+      },
+      0, discovery_info.retain);
+
+  global_mqtt_client->publish_json(
+      discovery_info.prefix + "/sensor/awox-" + device->address_str_hex_only() + "-voltage/config",
+      [this, device](JsonObject root) {
+        root[MQTT_NAME] = "Voltage";
+        root[MQTT_UNIQUE_ID] = "awox-" + device->address_str() + "-voltage";
+        root[MQTT_STATE_TOPIC] = this->get_mqtt_topic_for_(device, "voltage");
+        root["device_class"] = "voltage";
+        root["state_class"] = "measurement";
+        root["unit_of_measurement"] = "V";
+        root[MQTT_ICON] = "mdi:sine-wave";
+
+        JsonArray availability = root[MQTT_AVAILABILITY].to<JsonArray>();
+
+        auto availability_topic_1 = availability.add<JsonObject>();
+        availability_topic_1[MQTT_TOPIC] = this->get_mqtt_topic_for_(device, "availability");
+
+        auto availability_topic_();
+        availability_topic_2[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/status";
+
+        auto availability_topic_3 = availability.add<JsonObject>();
+        availability_topic_3[MQTT_TOPIC] = global_mqtt_client->get_topic_prefix() + "/connected";
+
+        root[MQTT_AVAILABILITY_MODE] = "all";
+
+        JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
+        JsonArray identifiers = device_info[MQTT_DEVICE_IDENTIFIERS].to<JsonArray>();
+        identifiers.add("esp-awox-mesh-" + std::to_string(device->mesh_id));
+        identifiers.add(device->address_str());
+      },
+      0, discovery_info.retain);
+}
+
+void AwoxMeshMqtt::publish_power_measurement(Device *device) {
+  if (device == nullptr || !device->power_measurement_available) {
+    return;
+  }
+
+  ESP_LOGI(
+      TAG,
+      "Publish power measurement for device %u: %.1f W, %.1f V",
+      device->mesh_id,
+      device->power,
+      device->voltage
+  );
+
+  global_mqtt_client->publish(
+      this->get_mqtt_topic_for_(device, "power"),
+      std::to_string(device->power),
+      0,
+      false
+  );
+
+  global_mqtt_client->publish(
+      this->get_mqtt_topic_for_(device, "voltage"),
+      std::to_string(device->voltage),
+      0,
+      false
+  );
 }
 
 void AwoxMeshMqtt::send_group_discovery(Group *group) {
