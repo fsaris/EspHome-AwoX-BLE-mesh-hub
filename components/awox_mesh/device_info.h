@@ -20,6 +20,8 @@ namespace awox_mesh {
 class DeviceInfo {
  protected:
   const char *component_type;
+  // Value for `type:` in the awox_mesh devices YAML
+  const char *type_name;
   int product_id;
   const char *name;
   const char *model;
@@ -40,6 +42,7 @@ class DeviceInfo {
   }
 
   const char *get_component_type() const { return this->component_type; }
+  const char *get_type_name() const { return this->type_name; }
   int get_product_id() const { return this->product_id; }
   const char *get_name() const { return this->name; }
   const char *get_model() const { return this->model; }
@@ -54,6 +57,7 @@ class MeshLightColor : public DeviceInfo {
   MeshLightColor(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     component_type = "light";
+    this->type_name = "RGB";
 
     this->add_feature(FEATURE_LIGHT_MODE);
     this->add_feature(FEATURE_COLOR);
@@ -69,6 +73,7 @@ class MeshLightWhiteTemperature : public DeviceInfo {
                             const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "light";
+    this->type_name = "WHITE_TEMP";
 
     this->add_feature(FEATURE_LIGHT_MODE);
     this->add_feature(FEATURE_WHITE_BRIGHTNESS);
@@ -81,6 +86,7 @@ class MeshLightWhite : public DeviceInfo {
   MeshLightWhite(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "light";
+    this->type_name = "DIM";
 
     this->add_feature(FEATURE_LIGHT_MODE);
     this->add_feature(FEATURE_WHITE_BRIGHTNESS);
@@ -92,6 +98,7 @@ class MeshPlug : public DeviceInfo {
   MeshPlug(int product_id, const char *name, const char *model, const char *manufacturer, const char *icon = "")
       : DeviceInfo(product_id, name, model, manufacturer, icon) {
     this->component_type = "switch";
+    this->type_name = "PLUG";
   }
 };
 

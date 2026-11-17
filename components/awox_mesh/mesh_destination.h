@@ -7,6 +7,7 @@ namespace esphome {
 namespace awox_mesh {
 
 class Group;
+class MeshEntity;
 
 struct MeshDestinationState {
   unsigned char state[7];
@@ -26,8 +27,11 @@ class MeshDestination {
   unsigned char B = 0;
 
   bool online = false;
-  bool send_discovery = false;
+  // Product info received (devices) or device type known (groups)
+  bool identified = false;
   DeviceInfo *device_info = nullptr;
+  // Home Assistant entity configured for this device or group, nullptr when not in the YAML
+  MeshEntity *entity = nullptr;
 
   virtual int dest();
   virtual const char *type() const;

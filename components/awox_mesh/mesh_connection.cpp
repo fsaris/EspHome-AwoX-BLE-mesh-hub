@@ -8,6 +8,7 @@
 #include "helpers.h"
 #include "group.h"
 #include "aes/esp_aes.h"
+#include <esp_random.h>
 #include "esphome/core/application.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/helpers.h"
@@ -74,7 +75,7 @@ void MeshConnection::set_address(uint64_t address) {
       Device *device = this->mesh_->get_device(mesh_id);
       if (device != nullptr) {
         device->online = false;
-        this->mesh_->publish_availability(device, true);
+        this->mesh_->on_availability_changed(device);
       }
     }
   }
@@ -425,7 +426,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     ESP_LOGD(TAG, "MAC report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
              device->address_str().c_str());
 
-    this->mesh_->send_discovery(device);
+    this->mesh_->on_device_identified(device);
     return;
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_DEVICE_INFO_REPORT && packet.size() >= 16 &&
              static_cast<unsigned char>(packet[10]) == 0x10) {
@@ -445,7 +446,7 @@ void MeshConnection::handle_packet(std::string &packet) {
     ESP_LOGD(TAG, "Device info report, dev [%u]: productID: 0x%02X mac: %s", mesh_id, device->product_id,
              device->address_str().c_str());
 
-    this->mesh_->send_discovery(device);
+    this->mesh_->on_device_identified(device);
     return;
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_GROUP_ID_REPORT) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
@@ -505,12 +506,11 @@ void MeshConnection::handle_packet(std::string &packet) {
   device->B = B;
   device->last_online = esphome::millis();
 
-  // todo move logic below to mesh or mqtt class
   ESP_LOGI(TAG, device->state_as_string().c_str());
   this->mesh_->publish_state(device);
 
   if (online_changed) {
-    this->mesh_->publish_availability(device, true);
+    this->mesh_->on_availability_changed(device);
   }
 }
 

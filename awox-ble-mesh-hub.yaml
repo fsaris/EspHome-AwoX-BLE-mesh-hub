@@ -1,7 +1,7 @@
 esphome:
   name: awox-ble-mesh-hub
   friendly_name: "AwoX BLE mesh hub"
-  name_add_mac_suffix: false # Don't break mqtt # https://github.com/esphome/issues/issues/6989
+  name_add_mac_suffix: false
 
 esp32:
   # Match this with the board your using
@@ -33,16 +33,9 @@ logger:
 #     loop_time:
 #       name: "Loop Time"
 
-mqtt:
-  broker: !secret mqtt_host
-  username: !secret mqtt_user
-  password: !secret mqtt_password
-
-  # Disable retained discovery messages until you are got the config correct
-  discovery_retain: False
-
-# Disable Home Assistant API to prevent frequent MQTT disconnections
-#api:
+api:
+  encryption:
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
@@ -91,10 +84,32 @@ awox_mesh:
   #   - A4:C1:38:65:AD:22
 
   device_info:
-    # Example device type, see device info in HomeAssistant or MQTT message to find the 'product_id'
+    # Example device type, the 'product_id' is shown in the log for devices that are not configured yet
     - product_id: 0x32
       device_type: RGB
       manufacturer: EGLO
       name: Spot 120
       model: EGLOSpot 120/w
       icon: mdi:wall-sconce-flat
+
+  # Mesh devices and groups to show in Home Assistant.
+  # Devices and groups that are not listed here are written to the log, ready to copy.
+  devices:
+    - mesh_id: 12345
+      name: Kitchen spot
+      type: RGB # RGB, WHITE_TEMP, DIM or PLUG
+
+  groups:
+    - group_id: 3
+      name: Living room
+      type: RGB
+
+  # Optional diagnostic sensors
+  active_connections:
+    name: Active connections
+  online_devices:
+    name: Online devices
+  unconfigured_devices:
+    name: Unconfigured mesh devices
+  last_unconfigured_device:
+    name: Last unconfigured device

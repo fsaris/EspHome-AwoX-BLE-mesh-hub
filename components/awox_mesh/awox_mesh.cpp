@@ -7,12 +7,17 @@
 #include "awox_mesh.h"
 
 #include "esphome/core/log.h"
+#ifdef USE_API
+#include "esphome/components/api/api_server.h"
+#endif
 
 namespace esphome {
 namespace awox_mesh {
 
 static const char *const TAG = "awox.mesh";
 static const int RSSI_NOT_AVAILABLE = -9999;
+// Also the longest state Home Assistant accepts
+static constexpr size_t ENTRY_BUFFER_SIZE = 256;
 
 static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
   std::vector<int>::const_iterator position = std::find(vector.begin(), vector.end(), mesh_id);
@@ -101,11 +106,23 @@ bool AwoxMesh::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
 void AwoxMesh::setup() {
   Component::setup();
 
-  this->publish_connection->setup();
+  this->set_interval("publish_connection", 5000, [this]() {
+    this->publish_connected();
+    this->publish_next_unconfigured();
+  });
+}
 
-  this->publish_connection->publish_connection_sensor_discovery(this->connections_);
-
-  this->set_interval("publish_connection", 5000, [this]() { this->publish_connected(); });
+void AwoxMesh::dump_config() {
+  ESP_LOGCONFIG(TAG, "AwoX mesh:\n  Mesh name: %s\n  Configured devices and groups: %u", this->mesh_name.c_str(),
+                (unsigned) this->entities_.size());
+  for (Device *device : this->mesh_devices_) {
+    if (device->identified && device->entity == nullptr)
+      this->log_unconfigured_device(device);
+  }
+  for (Group *group : this->mesh_groups_) {
+    if (group->identified && group->entity == nullptr)
+      this->log_unconfigured_group(group);
+  }
 }
 
 bool AwoxMesh::start_up_delay_done() {
@@ -157,32 +174,18 @@ void AwoxMesh::loop() {
   }
 
   for (auto *device : this->mesh_devices_) {
-    if (!device->send_discovery && device->device_info_requested > 0 &&
+    if (!device->identified && device->device_info_requested > 0 &&
         device->device_info_requested < esphome::millis() - this->device_info_request_interval_ms) {
       ESP_LOGD(TAG, "Request info again for %u", device->mesh_id);
       this->request_device_info(device);
     }
   }
 
-  while (!this->delayed_availability_publish.empty()) {
-    if (this->delayed_availability_publish.front().time >
-        esphome::millis() - this->delayed_availability_publish_debounce_time_ms) {
-      break;
-    }
-
-    PublishOnlineStatus publish = this->delayed_availability_publish.front();
-    this->delayed_availability_publish.pop_front();
-    if (publish.online == publish.device->online) {
-      this->publish_availability(publish.device, false);
-    } else {
-      ESP_LOGD(TAG, "Skipped publishing availability for %u - %s (is currently %s again)", publish.device->mesh_id,
-               publish.online ? "Online" : "Offline", publish.device->online ? "Online" : "Offline");
-    }
-  }
-
   for (Group *group : this->mesh_groups_) {
-    if (!group->send_discovery && group->device_info != nullptr) {
-      this->send_group_discovery(group);
+    if (!group->identified && group->device_info != nullptr) {
+      group->identified = true;
+      if (group->entity == nullptr)
+        this->log_unconfigured_group(group);
     }
   }
 
@@ -354,6 +357,7 @@ Device *AwoxMesh::get_device(int mesh_id) {
 
   Device *device = new Device;
   device->mesh_id = mesh_id;
+  this->bind_entity(device);
   this->mesh_devices_.push_back(device);
 
   ESP_LOGI(TAG, "Added mesh_id: %d, Number of found mesh devices = %d", device->mesh_id, this->mesh_devices_.size());
@@ -384,6 +388,7 @@ Group *AwoxMesh::get_group(int dest, Device *device) {
   Group *group = new Group;
   group->group_id = dest;
   group->device_info = device->device_info;
+  this->bind_entity(group);
 
   group->add_device(device);
   device->add_group(group);
@@ -415,26 +420,132 @@ void AwoxMesh::publish_connected() {
   linked_mesh_ids.erase(unique(linked_mesh_ids.begin(), linked_mesh_ids.end()), linked_mesh_ids.end());
   online_devices = linked_mesh_ids.size();
 
-  this->publish_connection->publish_connected(active_connections, online_devices, this->connections_);
+#ifdef USE_SENSOR
+  if (this->active_connections_sensor_ != nullptr &&
+      (!this->active_connections_sensor_->has_state() ||
+       this->active_connections_sensor_->get_raw_state() != active_connections)) {
+    this->active_connections_sensor_->publish_state(active_connections);
+  }
+  if (this->online_devices_sensor_ != nullptr &&
+      (!this->online_devices_sensor_->has_state() || this->online_devices_sensor_->get_raw_state() != online_devices)) {
+    this->online_devices_sensor_->publish_state(online_devices);
+  }
+  const int unconfigured = this->count_unconfigured();
+  if (this->unconfigured_devices_sensor_ != nullptr &&
+      (!this->unconfigured_devices_sensor_->has_state() ||
+       this->unconfigured_devices_sensor_->get_raw_state() != unconfigured)) {
+    this->unconfigured_devices_sensor_->publish_state(unconfigured);
+  }
+#endif
 }
 
-void AwoxMesh::publish_availability(Device *device, bool delayed) {
-  if (delayed) {
-    PublishOnlineStatus publish = {};
-    publish.device = device;
-    publish.online = device->online;
-    publish.time = esphome::millis();
-    this->delayed_availability_publish.push_back(publish);
-    ESP_LOGD(TAG, "Delayed publish online/offline for %d - %s", device->mesh_id, device->online ? "online" : "offline");
+void AwoxMesh::on_availability_changed(Device *device) {
+  ESP_LOGI(TAG, "Device %d is %s", device->mesh_id, device->online ? "online" : "offline");
+}
 
+void AwoxMesh::bind_entity(MeshDestination *destination) {
+  const int dest = destination->dest();
+  for (MeshEntity *entity : this->entities_) {
+    if (entity->get_dest() == dest) {
+      destination->entity = entity;
+      entity->set_destination(destination);
+      return;
+    }
+  }
+}
+
+int AwoxMesh::count_unconfigured() {
+  int count = 0;
+  for (Device *device : this->mesh_devices_) {
+    if (device->identified && device->entity == nullptr)
+      count++;
+  }
+  for (Group *group : this->mesh_groups_) {
+    if (group->identified && group->entity == nullptr)
+      count++;
+  }
+  return count;
+}
+
+// One line of YAML flow style, so it can be copied from the Home Assistant state as is
+static void format_device_entry(char *buffer, size_t size, Device *device) {
+  DeviceInfo *info = device->device_info;
+  const char *icon = info->get_icon();
+  const bool has_icon = icon[0] != '\0';
+  snprintf(buffer, size, "- {mesh_id: %d, name: \"%s %d\", type: %s%s%s%s}  # product 0x%02X, mac %s", device->mesh_id,
+           info->get_name(), device->mesh_id, info->get_type_name(), has_icon ? ", icon: \"" : "",
+           has_icon ? icon : "", has_icon ? "\"" : "", device->product_id, device->address_str().c_str());
+}
+
+static void format_group_entry(char *buffer, size_t size, Group *group) {
+  snprintf(buffer, size, "- {group_id: %d, name: \"Group %d\", type: %s}", group->group_id, group->group_id,
+           group->device_info->get_type_name());
+}
+
+void AwoxMesh::log_unconfigured_device(Device *device) {
+  char entry[ENTRY_BUFFER_SIZE];
+  format_device_entry(entry, sizeof(entry), device);
+  ESP_LOGI(TAG, "Mesh device %d is not configured. Add it to awox_mesh -> devices:\n  %s", device->mesh_id, entry);
+  this->publish_unconfigured(entry);
+}
+
+void AwoxMesh::log_unconfigured_group(Group *group) {
+  char entry[ENTRY_BUFFER_SIZE];
+  format_group_entry(entry, sizeof(entry), group);
+  ESP_LOGI(TAG, "Mesh group %d is not configured. Add it to awox_mesh -> groups:\n  %s", group->group_id, entry);
+  this->publish_unconfigured(entry);
+}
+
+bool AwoxMesh::can_publish_unconfigured() {
+#ifdef USE_TEXT_SENSOR
+  if (this->last_unconfigured_sensor_ == nullptr)
+    return false;
+#ifdef USE_API
+  // Home Assistant only keeps states it received, so wait until it listens
+  if (api::global_api_server == nullptr || !api::global_api_server->is_connected_with_state_subscription())
+    return false;
+#endif
+  return true;
+#else
+  return false;
+#endif
+}
+
+void AwoxMesh::publish_unconfigured(const char *entry) {
+#ifdef USE_TEXT_SENSOR
+  if (this->can_publish_unconfigured())
+    this->last_unconfigured_sensor_->publish_state(entry);
+#endif
+}
+
+void AwoxMesh::publish_next_unconfigured() {
+#ifdef USE_TEXT_SENSOR
+  if (!this->can_publish_unconfigured()) {
+    // Go through the whole list again once Home Assistant (re)connects
+    this->unconfigured_round_index_ = 0;
     return;
   }
 
-  this->publish_connection->publish_availability(device);
-
-  for (Group *group : device->get_groups()) {
-    this->publish_connection->publish_availability(group);
+  // Publish the next one each status update, so each entry gets its own place in the history
+  int index = 0;
+  char entry[ENTRY_BUFFER_SIZE];
+  for (Device *device : this->mesh_devices_) {
+    if (device->identified && device->entity == nullptr && index++ == this->unconfigured_round_index_) {
+      format_device_entry(entry, sizeof(entry), device);
+      this->last_unconfigured_sensor_->publish_state(entry);
+      this->unconfigured_round_index_++;
+      return;
+    }
   }
+  for (Group *group : this->mesh_groups_) {
+    if (group->identified && group->entity == nullptr && index++ == this->unconfigured_round_index_) {
+      format_group_entry(entry, sizeof(entry), group);
+      this->last_unconfigured_sensor_->publish_state(entry);
+      this->unconfigured_round_index_++;
+      return;
+    }
+  }
+#endif
 }
 
 void AwoxMesh::sync_and_publish_group_state(Group *group) {
@@ -540,40 +651,29 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
 
 void AwoxMesh::publish_state(MeshDestination *mesh_destination) {
   ESP_LOGV(TAG, "Publish: %s", mesh_destination->state_as_string().c_str());
-  this->publish_connection->publish_state(mesh_destination);
+  if (mesh_destination->entity != nullptr)
+    mesh_destination->entity->publish_mesh_state();
 
   for (Group *group : mesh_destination->get_groups()) {
     this->sync_and_publish_group_state(group);
   }
 }
 
-void AwoxMesh::send_discovery(Device *device) {
-  if (device->send_discovery) {
+void AwoxMesh::on_device_identified(Device *device) {
+  if (device->identified) {
     return;
   }
 
   if (!device->address_set()) {
-    ESP_LOGW(TAG, "'%s': Can not yet send discovery, mac address not known...",
-             std::to_string(device->mesh_id).c_str());
+    ESP_LOGW(TAG, "[%d] Mac address not known yet", device->mesh_id);
     return;
   }
 
   device->device_info = this->device_info_resolver->get_by_product_id(device->product_id);
-  if (this->publish_connection->send_discovery(device)) {
-    device->send_discovery = true;
-  }
-}
+  device->identified = true;
 
-void AwoxMesh::send_group_discovery(Group *group) {
-  if (group->device_info == nullptr) {
-    ESP_LOGW(TAG, "'%s': Can not yet send discovery, component_type not known...",
-             std::to_string(group->group_id).c_str());
-    return;
-  }
-
-  group->send_discovery = true;
-
-  this->publish_connection->send_group_discovery(group);
+  if (device->entity == nullptr)
+    this->log_unconfigured_device(device);
 }
 
 void AwoxMesh::call_connection(int dest, std::function<void(MeshConnection *)> &&callback) {

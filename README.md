@@ -1,16 +1,25 @@
-# ESPHome component: AwoX BLE mesh (mqtt) hub
+# ESPHome component: AwoX BLE mesh hub
 
-A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
+A ESPhome component (https://esphome.io/components/external_components.html#git) to create a hub for your AwoX BLE mesh devices. The devices are made available to Home Assistant through the native ESPHome API.
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
 ### Devices
 
-When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
+Each mesh device you want in Home Assistant is listed under [`devices`](#devices-list-optional) in the YAML. Every entry becomes its own device in Home Assistant (connected through the hub) with one light or switch.
 
-Each device type/product can be configured by `product_id` so it gets the correct features in HomeAssistant.
+The native API can only offer entities that are known when the firmware is compiled, so devices can not be added automatically like with MQTT discovery. To make this easy the hub still finds all mesh devices, and for each device that is not in your YAML it writes a ready to copy entry to the log:
 
-The `product id` needed for the configuration is shown in model string of the mqtt discovery message/HomeAssistant device info. [See yaml options](#device_info)
+```
+[I][awox.mesh]: Mesh device 12345 is not configured. Add it to awox_mesh -> devices:
+  - {mesh_id: 12345, name: "Spot 120 12345", type: RGB, icon: "mdi:wall-sconce-flat"}  # product 0x32, mac A4:C1:38:8A:BA:11
+```
+
+The same entries are also published one by one to the optional [`last_unconfigured_device`](#last_unconfigured_device-text-sensor-optional) sensor, so you can copy them from its history in Home Assistant.
+
+So the first time: flash the hub, copy the entries from the sensor history or the log into your YAML, give them a nice name and flash again. The list is printed again every time you open the logs. The optional [`unconfigured_devices`](#active_connections-online_devices-unconfigured_devices-sensor-optional) sensor shows how many devices are still missing.
+
+The `type`, `name` and `icon` in the log are taken from the [`device_info`](#device_info) list, by `product_id`. Unknown products are suggested as `DIM`, check the type of these yourself.
 
 <details>
   <summary>Config examples known devices</summary>
@@ -733,9 +742,7 @@ device_info:
 
 ### Groups/zones
 
-The groups (called zone in AwoxHomeControl) are automaticly discovered as lights with the group id as name (example: `Group 3`).
-
-When using HomeAssistant the groups will show up as a device under the MQTT integration. And you can (re)name the group/device there.
+The groups (called zone in AwoxHomeControl) are configured like devices, under [`groups`](#groups-list-optional). Groups that are found in the mesh but not configured are also written to the log, with the group id as name (example: `Group 3`).
 
 When 1 light in a group is `on` the group will be shown as `on`. If 1 light in the group is `online` the group will be shown `online`.
 
@@ -802,9 +809,78 @@ In some situations the device that the hub connects to isn't able to reach the n
 ###### _Default value: 2_
 
 
+#### `devices` _(list - OPTIONAL)_
+
+The mesh devices to make available in Home Assistant. Each entry becomes a device in Home Assistant with one entity: a light, or a switch for `PLUG`.
+
+###### _Example:_
+```yaml
+  devices:
+    - mesh_id: 12345
+      name: Kitchen spot
+      type: RGB
+    - mesh_id: 23456
+      name: Coffee machine
+      type: PLUG
+      area_id: kitchen # an area from esphome -> areas
+```
+
+- `mesh_id` _(number)_ - The id of the device in the mesh, shown in the log.
+- `name` _(string)_ - The name of the device in Home Assistant.
+- `type` _(RGB, DIM, WHITE_TEMP, PLUG)_ - See [`device_type`](#device_type-rgb-dim-white_temp-plug).
+- `area_id` _(OPTIONAL)_ - The id of an area defined under [`esphome: areas:`](https://esphome.io/components/esphome/#areas).
+- All options of an [ESPHome light](https://esphome.io/components/light/#base-light-configuration) or [switch](https://esphome.io/components/switch/#base-switch-configuration) can be used, for example `icon`, `on_turn_on` or `disabled_by_default`. Not available:
+  - `effects` - the mesh effects `Candle` and `Color loop` are always added for RGB lights.
+  - `restore_mode`, `restore_state` and `initial_state` - the state is always taken from the mesh.
+  - `gamma_correct` - brightness is sent to the mesh without gamma correction.
+
+The hub creates an ESPHome [sub-device](https://esphome.io/components/esphome/#sub-devices) with id `awox_mesh_<mesh_id>` for each entry, so do not use these ids yourself.
+
+
+#### `groups` _(list - OPTIONAL)_
+
+The mesh groups to make available in Home Assistant. Same options as [`devices`](#devices-list-optional), with `group_id` instead of `mesh_id`. The default `icon` of a group is `mdi:lightbulb-group`.
+
+###### _Example:_
+```yaml
+  groups:
+    - group_id: 3
+      name: Living room
+      type: RGB
+```
+
+When 1 light in a group is `on` the group will be shown as `on`.
+
+
+#### `last_unconfigured_device` _(text sensor - OPTIONAL)_
+
+Shows one device or group that is not in your YAML, as a line you can paste under `devices:` or `groups:`. The next one is shown every 5 seconds until all have been shown, and again each time Home Assistant connects to the hub. Open the history of the sensor in Home Assistant to see all of them. All options of an [ESPHome text sensor](https://esphome.io/components/text_sensor/#base-text-sensor-configuration) can be used.
+
+###### _Example:_
+```yaml
+  last_unconfigured_device:
+    name: Last unconfigured device
+```
+
+
+#### `active_connections`, `online_devices`, `unconfigured_devices` _(sensor - OPTIONAL)_
+
+Diagnostic sensors of the hub: the number of BLE connections to the mesh, the number of mesh devices reachable through these connections, and the number of mesh devices and groups that are found but not in your YAML. All options of an [ESPHome sensor](https://esphome.io/components/sensor/#base-sensor-configuration) can be used.
+
+###### _Example:_
+```yaml
+  active_connections:
+    name: Active connections
+  online_devices:
+    name: Online devices
+  unconfigured_devices:
+    name: Unconfigured mesh devices
+```
+
+
 #### `device_info`
 
-List of device type descriptions.
+List of device type descriptions, used to suggest the `type`, `name` and `icon` of devices that are not configured yet.
 
 ###### _Example:_
 ```yaml
@@ -817,7 +893,7 @@ List of device type descriptions.
       icon: mdi:wall-sconce-flat
 ```
 
-For each `product_id` the available features and name + icon can be configured. Unknown devices will be recognized as a dimmable device (`DIM`).
+Unknown devices are suggested as a dimmable device (`DIM`).
 
 ##### `product_id` _(hex value)_
 
@@ -852,14 +928,14 @@ The product model name.
 
 ##### `icon` _(string representing a mdi icon - OPTIONAL)_
 
-The product icon used for example in HomeAssistent as device icon.
+Added to the suggested entry for devices of this product. The icon of a configured device is set with `icon` on its entry in [`devices`](#devices-list-optional).
 
 ###### _Example value: `mdi:wall-sconce-flat`_
 
 
 ### General YAML / Setup remarks
 
-- Disable Home Assistant API (`api:`) to prevent frequent MQTT disconnections
+- Enable the Home Assistant API (`api:`)
 - Use the `esp-idf` as framework type
 
 #### Hidden SSID WLAN
@@ -868,7 +944,7 @@ In case of using a WLAN with hidden SSID, mind to use the multiple network optio
 
 #### Ethernet instead of Wi-Fi (ESP32-S3, Seeed XIAO W5500 Ethernet Adapter)
 
-The component does not use Wi-Fi itself, only MQTT, so the hub can run on a wired connection. A ready-to-use example for the
+The component does not use Wi-Fi itself, only the ESPHome API, so the hub can run on a wired connection. A ready-to-use example for the
 [Seeed Studio XIAO W5500 Ethernet Adapter](https://wiki.seeedstudio.com/xiao_w5500_ethernet_adapter/) (XIAO ESP32-S3 Plus + WIZnet W5500, powered by PoE or USB-C)
 is in [awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml](awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml).
 
@@ -892,18 +968,17 @@ Remarks:
 
 - Seeed documents the ESPHome setup only for boards produced after November 1st 2025 (hardware revision V1.2, which fixed the `INT` pin wiring). Check the pins against the schematic if the Ethernet link does not come up with an older board.
 - The first flash has to be done over USB-C. Afterwards `esphome upload --device <ip-address>` works over Ethernet. The `.local` mDNS name is not resolved across VLANs/subnets, use the IP address.
-- The W5500 sends untagged frames. If you use VLANs, plug the board into an access port of the VLAN where your MQTT broker is reachable.
+- The W5500 sends untagged frames. If you use VLANs, plug the board into an access port of the VLAN where Home Assistant is reachable.
 - Without PoE the board needs 5 V on USB-C; a plain Ethernet cable only carries data.
 - Without a cable the log shows `Connecting failed; reconnecting` every 15 seconds. This is normal and does not mean the pins are wrong.
 - Other boards with a W5500 use the same [`ethernet:`](https://esphome.io/components/ethernet/) component, with their own board, variant and pins.
 
 ### Requirements
 - ESP32 module (Wi-Fi or Ethernet; the ESP32-S3 with a W5500 is described [above](#ethernet-instead-of-wi-fi-esp32-s3-seeed-xiao-w5500-ethernet-adapter))
-- ESPHome 2025.12.0 or newer
-- MQTT broker
+- ESPHome 2026.10.1 or newer
 
 ### Recomendations
-- HomeAssistant 2023.8.0 or newer
+- HomeAssistant with the ESPHome integration (sub-device support, 2025.7.0 or newer)
 - ESPHome add-on for HomeAssistant
 
 
