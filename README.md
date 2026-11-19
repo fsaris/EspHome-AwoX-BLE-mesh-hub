@@ -935,7 +935,7 @@ Added to the suggested entry for devices of this product. The icon of a configur
 
 ### General YAML / Setup remarks
 
-- Enable the Home Assistant API (`api:`)
+- Enable the Home Assistant API (`api:`), or use MQTT instead (see [below](#mqtt-instead-of-the-native-api))
 - Use the `esp-idf` as framework type
 
 #### Hidden SSID WLAN
@@ -972,6 +972,25 @@ Remarks:
 - Without PoE the board needs 5 V on USB-C; a plain Ethernet cable only carries data.
 - Without a cable the log shows `Connecting failed; reconnecting` every 15 seconds. This is normal and does not mean the pins are wrong.
 - Other boards with a W5500 use the same [`ethernet:`](https://esphome.io/components/ethernet/) component, with their own board, variant and pins.
+
+#### MQTT instead of the native API
+
+The lights and switches are normal ESPHome entities, so they also work with the [`mqtt:`](https://esphome.io/components/mqtt/) component. Replace `api:` with `mqtt:` in your YAML:
+
+```yaml
+mqtt:
+  broker: 192.168.1.10
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+```
+
+Differences from the native API:
+
+- ESPHome MQTT discovery does not support sub-devices. In Home Assistant all lights and switches are entities of the hub device, not separate devices.
+- When there is no `api:` in the YAML, each light or switch gets the `name` of its device or group as its own name, so the entities can be told apart in Home Assistant. Use a different `name` for each device and group: the name is also used in the MQTT topics.
+- When both `api:` and `mqtt:` are used, the native API setup is kept: the entities have no name of their own, so over MQTT they all show the name of the hub.
+- Use either `api:` or `mqtt:`, not both. The Bluetooth connections to the mesh already use a large part of the ESP32 memory, and running both on the same hub can leave too little free memory and make it unstable.
+- An `ota:` with `encryption:` but no `key:` takes the key from `api:`. Without `api:`, add the key to `ota:` itself.
 
 ### Requirements
 - ESP32 module (Wi-Fi or Ethernet; the ESP32-S3 with a W5500 is described [above](#ethernet-instead-of-wi-fi-esp32-s3-seeed-xiao-w5500-ethernet-adapter))

@@ -9,6 +9,7 @@ from esphome.components import (
     text_sensor,
 )
 from esphome.const import (
+    CONF_API,
     CONF_AREA_ID,
     CONF_DEFAULT_TRANSITION_LENGTH,
     CONF_DEVICE_ID,
@@ -264,8 +265,13 @@ CONFIG_SCHEMA = cv.All(
 
 def _final_validate(config: ConfigType) -> None:
     # Sub-devices can only be created by the core, so add ours to esphome -> devices
-    core_devices = fv.full_config.get()[CONF_ESPHOME].setdefault(CONF_DEVICES, [])
+    full_config = fv.full_config.get()
+    core_devices = full_config[CONF_ESPHOME].setdefault(CONF_DEVICES, [])
+    # Without the API (MQTT only) sub-devices are not used, so each entity needs a name of its own
+    name_entities = CONF_API not in full_config
     for entry in config[CONF_DEVICES] + config[CONF_GROUPS]:
+        if name_entities:
+            entry[CONF_NAME] = entry[CONF_DEVICE_NAME]
         device = {
             CONF_ID: entry[CONF_DEVICE_ID],
             CONF_NAME: entry[CONF_DEVICE_NAME],
