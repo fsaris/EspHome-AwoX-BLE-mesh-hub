@@ -31,6 +31,15 @@ void AwoxMeshSwitch::publish_mesh_state() {
   this->publish_state(this->destination_->state);
 }
 
+#ifdef USE_SENSOR
+void AwoxMeshSwitch::publish_power_measurement(float power, float voltage) {
+  if (this->power_sensor_ != nullptr)
+    this->power_sensor_->publish_state(power);
+  if (this->voltage_sensor_ != nullptr)
+    this->voltage_sensor_->publish_state(voltage);
+}
+#endif
+
 }  // namespace awox_mesh
 }  // namespace esphome
 

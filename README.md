@@ -823,12 +823,17 @@ The mesh devices to make available in Home Assistant. Each entry becomes a devic
       name: Coffee machine
       type: PLUG
       area_id: kitchen # an area from esphome -> areas
+      power:
+        name: Power
+      voltage:
+        name: Voltage
 ```
 
 - `mesh_id` _(number)_ - The id of the device in the mesh, shown in the log.
 - `name` _(string)_ - The name of the device in Home Assistant.
 - `type` _(RGB, DIM, WHITE_TEMP, PLUG)_ - See [`device_type`](#device_type-rgb-dim-white_temp-plug).
 - `area_id` _(OPTIONAL)_ - The id of an area defined under [`esphome: areas:`](https://esphome.io/components/esphome/#areas).
+- `power`, `voltage` _(sensor - OPTIONAL, `PLUG` only)_ - Power (W) and voltage (V) measured by plugs with power monitoring, like the EGLO PLUG PLUS. When at least one is set, the hub asks the plug for a new reading every 5 seconds. All [sensor](https://esphome.io/components/sensor/#base-sensor-configuration) options can be used, for example `filters` to send fewer updates. The sensors are added to the same device as the switch.
 - All options of an [ESPHome light](https://esphome.io/components/light/#base-light-configuration) or [switch](https://esphome.io/components/switch/#base-switch-configuration) can be used, for example `icon`, `on_turn_on` or `disabled_by_default`. Not available:
   - `effects` - the mesh effects `Candle` and `Color loop` are always added for RGB lights.
   - `restore_mode`, `restore_state` and `initial_state` - the state is always taken from the mesh.

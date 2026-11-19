@@ -21,6 +21,10 @@ class MeshEntity {
   /// Publish the state last reported by the mesh on the entity, for every connected client.
   virtual void publish_mesh_state() = 0;
 
+  /// True when power or voltage sensors are configured, so the hub polls the plug for them.
+  virtual bool has_power_measurement() const { return false; }
+  virtual void publish_power_measurement(float power, float voltage) {}
+
  protected:
   AwoxMesh *const mesh_;
   const int dest_;

@@ -112,6 +112,13 @@ void AwoxMesh::setup() {
     this->publish_connected();
     this->publish_next_unconfigured();
   });
+
+  this->set_interval("plug_power_measurement", 5000, [this]() {
+    for (Device *device : this->mesh_devices_) {
+      if (device->online && device->entity != nullptr && device->entity->has_power_measurement())
+        this->request_power_measurement(device);
+    }
+  });
 }
 
 void AwoxMesh::dump_config() {
@@ -727,6 +734,17 @@ void AwoxMesh::request_device_info(Device *device) {
     connection->request_group_info(device);
     // connection->request_device_version(device->mesh_id);
   });
+}
+
+void AwoxMesh::request_power_measurement(Device *device) {
+  this->call_connection(device->mesh_id, [device](MeshConnection *connection) {
+    connection->request_power_measurement(device->mesh_id);
+  });
+}
+
+void AwoxMesh::publish_power_measurement(Device *device) {
+  if (device->entity != nullptr)
+    device->entity->publish_power_measurement(device->power, device->voltage);
 }
 
 void AwoxMesh::set_power(int dest, bool state) {

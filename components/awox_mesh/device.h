@@ -27,6 +27,9 @@ class Device : public MeshDestination {
 
   int product_id;
 
+  float power = 0.0f;
+  float voltage = 0.0f;
+
   uint32_t last_online = 0;
 
   uint32_t device_info_requested = 0;

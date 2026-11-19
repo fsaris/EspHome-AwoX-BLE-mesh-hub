@@ -21,12 +21,18 @@ from esphome.const import (
     CONF_ID,
     CONF_INITIAL_STATE,
     CONF_NAME,
+    CONF_POWER,
     CONF_RESTORE_MODE,
     CONF_RESTORE_STATE,
     CONF_TYPE,
+    CONF_VOLTAGE,
+    DEVICE_CLASS_POWER,
+    DEVICE_CLASS_VOLTAGE,
     ENTITY_CATEGORY_DIAGNOSTIC,
     ICON_COUNTER,
     STATE_CLASS_MEASUREMENT,
+    UNIT_VOLT,
+    UNIT_WATT,
 )
 from esphome.core.config import FRIENDLY_NAME_MAX_LEN, Area, Device
 import esphome.final_validate as fv
@@ -129,8 +135,27 @@ _ENTITY_SCHEMAS = {
     "DIM": _light_entity_schema(light.LightType.BRIGHTNESS_ONLY),
     "PLUG": switch.switch_schema(
         AwoxMeshSwitch, block_inverted=True, default_restore_mode="DISABLED"
+    ).extend(
+        {
+            # Only reported by plugs with power monitoring, such as the EGLO PLUG PLUS
+            cv.Optional(CONF_POWER): sensor.sensor_schema(
+                unit_of_measurement=UNIT_WATT,
+                accuracy_decimals=1,
+                device_class=DEVICE_CLASS_POWER,
+                state_class=STATE_CLASS_MEASUREMENT,
+            ),
+            cv.Optional(CONF_VOLTAGE): sensor.sensor_schema(
+                unit_of_measurement=UNIT_VOLT,
+                accuracy_decimals=1,
+                device_class=DEVICE_CLASS_VOLTAGE,
+                state_class=STATE_CLASS_MEASUREMENT,
+            ),
+        }
     ),
 }
+
+# Sensors of a device entry, with their default name
+_DEVICE_SENSORS = {CONF_POWER: "Power", CONF_VOLTAGE: "Voltage"}
 
 
 def _mesh_entity_schema(
@@ -163,6 +188,11 @@ def _mesh_entity_schema(
         config[CONF_NAME] = "None"
         # Derived from the mesh id so HA keeps the same device when the list is reordered
         config.setdefault(CONF_DEVICE_ID, f"{device_id_prefix}{config[id_key]}")
+        for key, default_name in _DEVICE_SENSORS.items():
+            if isinstance(sensor_config := config.get(key), dict):
+                # Shown in HA next to the switch, on the same sub-device
+                sensor_config.setdefault(CONF_NAME, default_name)
+                sensor_config.setdefault(CONF_DEVICE_ID, config[CONF_DEVICE_ID])
         if default_icon is not None:
             config.setdefault(CONF_ICON, default_icon)
         return typed(config)
@@ -272,6 +302,11 @@ def _final_validate(config: ConfigType) -> None:
     for entry in config[CONF_DEVICES] + config[CONF_GROUPS]:
         if name_entities:
             entry[CONF_NAME] = entry[CONF_DEVICE_NAME]
+            for key in _DEVICE_SENSORS:
+                if (sensor_config := entry.get(key)) is not None:
+                    sensor_config[CONF_NAME] = (
+                        f"{entry[CONF_DEVICE_NAME]} {sensor_config[CONF_NAME]}"
+                    )
         device = {
             CONF_ID: entry[CONF_DEVICE_ID],
             CONF_NAME: entry[CONF_DEVICE_NAME],
@@ -288,6 +323,9 @@ FINAL_VALIDATE_SCHEMA = _final_validate
 async def _register_entity(var: cg.MockObj, dest: int, entry: ConfigType) -> None:
     if entry[CONF_TYPE] == "PLUG":
         entity = await switch.new_switch(entry, var, dest)
+        sensors = sensor.sub_sensors(entry)
+        await sensors(CONF_POWER, entity.set_power_sensor)
+        await sensors(CONF_VOLTAGE, entity.set_voltage_sensor)
     else:
         entity = await light.new_light(entry, var, dest, DEVICE_TYPES[entry[CONF_TYPE]])
     cg.add(var.register_entity(entity))
