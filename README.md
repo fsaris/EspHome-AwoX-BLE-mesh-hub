@@ -172,53 +172,6 @@ To connect to you device you need the `mesh_name` and `mesh_password` easiest wa
 See [`mesh_name`](#mesh_name-string)
 
 
-#### `address_prefix` _(string - OPTIONAL)_
-
-The device will scan for available BLE devices and will use this prefix to filter discovered devices by MAC address.
-
-###### _Default value: `A4:C1`_
-
-
-#### `min_rssi` _(number - OPTIONAL)_
-
-The device will scan for available BLE devices and will use this value to filter discovered devices by the RSSI value.
-
-###### _Default value: -90_
-
-
-#### `allowed_mac_addresses` _(list of MAC addresses - OPTIONAL)_
-
-Instead of the `address_prefix` option you can configure a list of mac addresses that the hub is allowed to connect to. This enables you to exclude some devices that are often offline or to create multiple "mesh" networks when combined with the `allowed_mesh_ids` option.
-
-###### _Example:_
-```yaml
-  allowed_mac_addresses:
-    - A4:C1:38:8A:BA:11
-    - A4:C1:38:65:AD:22
-```
-
-
-#### `allowed_mesh_ids` _(list of numbers - OPTIONAL)_
-
-You can give a list of mesh_ids that only should be handled by this hub (ESPHome device).
-For example when you want to setup multiple ESP modules to only control a part of the mesh. Be sure to also set `allowed_mac_addresses` option to prevent that 1 device tries to connect to a mesh device that's not part of your `allowed_mesh_ids` list.
-
-###### _Example:_
-```yaml
- allowed_mesh_ids:
-   - 12345
-   - 23456
-   - 6758
-```
-
-
-#### `max_connections` _(number, min: 1, max: 3 - OPTIONAL)_
-
-In some situations the device that the hub connects to isn't able to reach the next device in the mesh. Then it can help that the hub connects to a different/additional device to be able to reach all device.
-
-###### _Default value: 2_
-
-
 #### `devices` _(list - OPTIONAL)_
 
 The mesh devices to make available in Home Assistant. Each entry becomes a device in Home Assistant with one entity: a light, or a switch for `PLUG`.
@@ -294,6 +247,55 @@ Diagnostic sensors of the hub: the number of BLE connections to the mesh, the nu
     name: Online devices
   unconfigured_devices:
     name: Unconfigured mesh devices
+```
+
+
+The options below control how the hub connects to the mesh. The defaults work for most setups. Change them when the hub does not reach all devices, or when you use more than one hub.
+
+#### `max_connections` _(number, min: 1, max: 3 - OPTIONAL)_
+
+In some situations the device that the hub connects to isn't able to reach the next device in the mesh. Then it can help that the hub connects to a different/additional device to be able to reach all device.
+
+###### _Default value: 2_
+
+
+#### `min_rssi` _(number - OPTIONAL)_
+
+The device will scan for available BLE devices and will use this value to filter discovered devices by the RSSI value.
+
+###### _Default value: -90_
+
+
+#### `address_prefix` _(string - OPTIONAL)_
+
+The device will scan for available BLE devices and will use this prefix to filter discovered devices by MAC address.
+
+###### _Default value: `A4:C1`_
+
+
+#### `allowed_mac_addresses` _(list of MAC addresses - OPTIONAL)_
+
+Instead of the `address_prefix` option you can configure a list of mac addresses that the hub is allowed to connect to. This enables you to exclude some devices that are often offline or to create multiple "mesh" networks when combined with the `allowed_mesh_ids` option.
+
+###### _Example:_
+```yaml
+  allowed_mac_addresses:
+    - A4:C1:38:8A:BA:11
+    - A4:C1:38:65:AD:22
+```
+
+
+#### `allowed_mesh_ids` _(list of numbers - OPTIONAL)_
+
+You can give a list of mesh_ids that only should be handled by this hub (ESPHome device).
+For example when you want to setup multiple ESP modules to only control a part of the mesh. Be sure to also set `allowed_mac_addresses` option to prevent that 1 device tries to connect to a mesh device that's not part of your `allowed_mesh_ids` list.
+
+###### _Example:_
+```yaml
+ allowed_mesh_ids:
+   - 12345
+   - 23456
+   - 6758
 ```
 
 
