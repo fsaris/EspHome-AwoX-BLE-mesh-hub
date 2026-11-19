@@ -899,7 +899,7 @@ Remarks:
 
 ### Requirements
 - ESP32 module (Wi-Fi or Ethernet; the ESP32-S3 with a W5500 is described [above](#ethernet-instead-of-wi-fi-esp32-s3-seeed-xiao-w5500-ethernet-adapter))
-- ESPHome 2025.12.0 or newer
+- ESPHome 2026.5.0 or newer
 - MQTT broker
 
 ### Recomendations
