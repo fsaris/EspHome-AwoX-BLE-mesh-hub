@@ -83,6 +83,7 @@ CONFIG_SCHEMA = cv.All(
     .extend(esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA)
     .extend(cv.COMPONENT_SCHEMA),
     validate_connections,
+    cv.require_esphome_version(2026, 5, 0),
 )
 
 
