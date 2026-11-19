@@ -4,11 +4,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iterator>
 
 #include "awox_mesh_light.h"
 #include "awox_mesh.h"
 
 #include "esphome/core/log.h"
+#include "esphome/core/macros.h"
+#include "esphome/core/version.h"
 
 namespace esphome {
 namespace awox_mesh {
@@ -93,7 +96,11 @@ light::LightTraits AwoxMeshLight::get_traits() {
 void AwoxMeshLight::setup_state(light::LightState *state) {
   this->state_ = state;
   if (this->has_color_()) {
-    state->add_effects({&this->color_loop_effect_, &this->candle_effect_});
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 11, 0)
+    state->add_effects(this->effects_, std::size(this->effects_));
+#else
+    state->add_effects({this->effects_[0], this->effects_[1]});
+#endif
   }
 }
 

@@ -43,6 +43,8 @@ class AwoxMeshLight : public light::LightOutput, public MeshEntity {
 
   AwoxMeshEffect color_loop_effect_{"Color loop"};
   AwoxMeshEffect candle_effect_{"Candle"};
+  // Since ESPHome 2026.11 LightState keeps a pointer to this table instead of copying it
+  light::LightEffect *effects_[2]{&this->color_loop_effect_, &this->candle_effect_};
 };
 
 }  // namespace awox_mesh

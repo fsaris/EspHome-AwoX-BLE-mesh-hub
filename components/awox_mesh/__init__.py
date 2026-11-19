@@ -31,6 +31,10 @@ from esphome.core.config import FRIENDLY_NAME_MAX_LEN, Area, Device
 import esphome.final_validate as fv
 from esphome.types import ConfigType
 
+# Sub-device relation added in ESPHome 2026.11; older versions ignore the key
+CONF_RELATION = "relation"
+DEVICE_RELATION_VIA = "via"
+
 AUTO_LOAD = [
     "esp32_ble_client",
     "esp32_ble_tracker",
@@ -262,7 +266,11 @@ def _final_validate(config: ConfigType) -> None:
     # Sub-devices can only be created by the core, so add ours to esphome -> devices
     core_devices = fv.full_config.get()[CONF_ESPHOME].setdefault(CONF_DEVICES, [])
     for entry in config[CONF_DEVICES] + config[CONF_GROUPS]:
-        device = {CONF_ID: entry[CONF_DEVICE_ID], CONF_NAME: entry[CONF_DEVICE_NAME]}
+        device = {
+            CONF_ID: entry[CONF_DEVICE_ID],
+            CONF_NAME: entry[CONF_DEVICE_NAME],
+            CONF_RELATION: DEVICE_RELATION_VIA,
+        }
         if (area_id := entry.get(CONF_AREA_ID)) is not None:
             device[CONF_AREA_ID] = area_id
         core_devices.append(device)
