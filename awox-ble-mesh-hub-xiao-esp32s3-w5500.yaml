@@ -7,7 +7,7 @@ esphome:
   name: awox-ble-mesh-hub
   friendly_name: "AwoX BLE mesh hub"
   name_add_mac_suffix: false # Don't break mqtt # https://github.com/esphome/issues/issues/6989
-  min_version: 2025.12.0
+  min_version: 2026.5.0
 
 esp32:
   board: seeed_xiao_esp32s3

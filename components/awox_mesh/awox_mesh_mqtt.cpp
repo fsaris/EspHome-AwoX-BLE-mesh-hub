@@ -8,6 +8,7 @@
 
 #include "esphome/components/mqtt/mqtt_const.h"
 #include "esphome/components/mqtt/mqtt_component.h"
+#include "esphome/core/alloc_helpers.h"
 #include "esphome/core/application.h"
 #include "esphome/core/log.h"
 
