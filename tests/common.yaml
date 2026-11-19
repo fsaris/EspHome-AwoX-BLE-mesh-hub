@@ -1,0 +1,85 @@
+# Shared by the build tests, covers every device type and optional sensor
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: esp-idf
+
+logger:
+
+wifi:
+  ssid: test
+  password: testtesttest
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+
+esphome:
+  areas:
+    - id: kitchen
+      name: Kitchen
+
+awox_mesh:
+  mesh_name: test
+  mesh_password: test
+  min_rssi: -85
+  max_connections: 3
+  allowed_mesh_ids: [1, 2, 3, 4, 5]
+  allowed_mac_addresses:
+    - A4:C1:38:8A:BA:11
+
+  device_info:
+    - product_id: 0x32
+      device_type: RGB
+      manufacturer: EGLO
+      name: Spot 120
+      model: EGLOSpot 120/w
+      icon: mdi:wall-sconce-flat
+    - product_id: 0x85
+      device_type: PLUG
+      manufacturer: EGLO
+      name: EGLO PLUG PLUS
+      model: SMPWBm10DE
+      icon: mdi:power-socket-de
+
+  devices:
+    - mesh_id: 1
+      name: Coffee machine
+      type: PLUG
+      area_id: kitchen
+      power: {}
+      voltage:
+        name: Mains voltage
+        filters:
+          - throttle: 60s
+    - mesh_id: 2
+      name: Lamp plug
+      type: PLUG
+    - mesh_id: 3
+      name: Kitchen spot
+      type: RGB
+    - mesh_id: 4
+      name: Hallway
+      type: WHITE_TEMP
+    - mesh_id: 5
+      name: Bedroom
+      type: DIM
+
+  groups:
+    - group_id: 3
+      name: Living room
+      type: RGB
+
+  active_connections:
+    name: Active connections
+  online_devices:
+    name: Online devices
+  unconfigured_devices:
+    name: Unconfigured mesh devices
+  last_unconfigured_device:
+    name: Last unconfigured device

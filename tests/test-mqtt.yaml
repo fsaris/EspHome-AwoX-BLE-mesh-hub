@@ -1,0 +1,10 @@
+# Build test: MQTT only, without the native API
+esphome:
+  name: awox-test-mqtt
+  friendly_name: AwoX test MQTT
+
+packages:
+  common: !include common.yaml
+
+mqtt:
+  broker: 192.168.1.2
