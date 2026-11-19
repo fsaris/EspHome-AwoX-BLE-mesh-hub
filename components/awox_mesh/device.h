@@ -27,10 +27,13 @@ class Device : public MeshDestination {
 
   int product_id;
 
+  float power = 0.0f;
+  float voltage = 0.0f;
+  bool power_measurement_available = false;
+
   uint32_t last_online = 0;
 
   uint32_t device_info_requested = 0;
-
   int dest() override { return this->mesh_id; };
 
   const char *type() const override { return "device"; }

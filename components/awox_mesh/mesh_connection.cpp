@@ -409,6 +409,45 @@ void MeshConnection::handle_packet(std::string &packet) {
              mesh_id, state, color_mode, sequence_mode, candle_mode, white_brightness, temperature, color_brightness, R,
              G, B, mode, std::bitset<8>(mode).to_string().c_str());
 
+  } else if (
+    static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT &&
+    packet.size() >= 15 &&
+    static_cast<unsigned char>(packet[10]) == 0x13) {
+
+  mesh_id =
+      static_cast<unsigned char>(packet[3]) |
+      (static_cast<unsigned char>(packet[4]) << 8);
+
+  device = this->mesh_->get_device(mesh_id);
+
+  if (device == nullptr) {
+    ESP_LOGD(TAG, "Power report for device [%u] ignored: device not known", mesh_id);
+    return;
+  }
+
+  const uint16_t voltage_raw =
+      static_cast<unsigned char>(packet[11]) |
+      (static_cast<unsigned char>(packet[12]) << 8);
+
+  const uint16_t power_raw =
+      static_cast<unsigned char>(packet[13]) |
+      (static_cast<unsigned char>(packet[14]) << 8);
+
+  device->voltage = static_cast<float>(voltage_raw) / 10.0f;
+  device->power = static_cast<float>(power_raw) / 10.0f;
+  device->power_measurement_available = true;
+
+  ESP_LOGI(
+      TAG,
+      "Power report, dev [%u]: %.1f V, %.1f W",
+      mesh_id,
+      device->voltage,
+      device->power
+  );
+
+  this->mesh_->publish_power_measurement(device);
+  return;    
+  
   } else if (static_cast<unsigned char>(packet[7]) == COMMAND_ADDRESS_REPORT && !packet[10]) {
     mesh_id = (static_cast<unsigned char>(packet[4]) * 256) + static_cast<unsigned char>(packet[3]);
     device = this->mesh_->get_device(mesh_id);
@@ -645,6 +684,16 @@ void MeshConnection::request_device_info(Device *device) {
 void MeshConnection::request_group_info(Device *device) {
   this->queue_command(COMMAND_GROUP_ID_QUERY, {0x0A, 0x01}, device->mesh_id);
 }
+
+void MeshConnection::request_power_measurement(int dest) {
+  ESP_LOGD(TAG, "[%u] Request power measurement", dest);
+  this->queue_command(
+      COMMAND_DEVICE_INFO_QUERY,
+      {0x10, 0x13},
+      dest
+  );
+}
+
 
 bool MeshConnection::request_device_version(int dest) {
   this->queue_command(COMMAND_DEVICE_INFO_QUERY, {0x10, 0x02}, dest);
