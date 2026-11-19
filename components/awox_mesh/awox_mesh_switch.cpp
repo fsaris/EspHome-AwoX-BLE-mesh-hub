@@ -17,6 +17,7 @@ void AwoxMeshSwitch::write_state(bool state) {
     return;
   }
   this->destination_->state = state;
+  this->destination_->command_sent();
   this->mesh_->set_power(this->dest_, state);
   this->publish_state(state);
 }

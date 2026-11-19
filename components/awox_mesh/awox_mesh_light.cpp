@@ -120,6 +120,7 @@ void AwoxMeshLight::write_state(light::LightState *state) {
   if (!values.is_on()) {
     if (destination->state) {
       destination->state = false;
+      destination->command_sent();
       this->mesh_->set_power(dest, false);
     }
     this->last_published_ = destination->state_as_char();
@@ -192,7 +193,10 @@ void AwoxMeshLight::write_state(light::LightState *state) {
     destination->state = true;
     if (!sent)
       this->mesh_->set_power(dest, true);
+    sent = true;
   }
+  if (sent)
+    destination->command_sent();
 
   this->last_published_ = destination->state_as_char();
 }

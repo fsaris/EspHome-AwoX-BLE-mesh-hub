@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
+#include "esphome/core/hal.h"
 #include "device_info.h"
 
 namespace esphome {
@@ -32,6 +34,16 @@ class MeshDestination {
   DeviceInfo *device_info = nullptr;
   // Home Assistant entity configured for this device or group, nullptr when not in the YAML
   MeshEntity *entity = nullptr;
+
+  // Set when Home Assistant sends a command. A group keeps the commanded state until its members
+  // report the same, so members that have not reported yet do not flip it back.
+  bool command_pending = false;
+  uint32_t command_time = 0;
+
+  void command_sent() {
+    this->command_pending = true;
+    this->command_time = millis();
+  }
 
   virtual int dest();
   virtual const char *type() const;

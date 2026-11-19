@@ -18,6 +18,8 @@ static const char *const TAG = "awox.mesh";
 static const int RSSI_NOT_AVAILABLE = -9999;
 // Also the longest state Home Assistant accepts
 static constexpr size_t ENTRY_BUFFER_SIZE = 256;
+// Longest time a group keeps a commanded state while waiting for its members to report it
+static constexpr uint32_t GROUP_COMMAND_HOLD_MS = 5000;
 
 static bool id_in_vector(int mesh_id, const std::vector<int> &vector) {
   std::vector<int>::const_iterator position = std::find(vector.begin(), vector.end(), mesh_id);
@@ -628,8 +630,30 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
     }
   }
 
-  group->state = state;
   group->online = online;
+
+  if (group->command_pending) {
+    bool members_agree = state == group->state;
+    if (members_agree && state && all_devices_same_state) {
+      members_agree = color_mode == group->color_mode && sequence_mode == group->sequence_mode &&
+                      candle_mode == group->candle_mode;
+      if (members_agree && color_mode) {
+        members_agree = color_brightness == group->color_brightness && R == group->R && G == group->G && B == group->B;
+      } else if (members_agree) {
+        members_agree = white_brightness == group->white_brightness && temperature == group->temperature;
+      }
+    }
+
+    if (members_agree || millis() - group->command_time >= GROUP_COMMAND_HOLD_MS) {
+      group->command_pending = false;
+    } else {
+      ESP_LOGV(TAG, "Group %d: members have not all applied the last command yet", group->group_id);
+      this->publish_state(group);
+      return;
+    }
+  }
+
+  group->state = state;
 
   if (all_devices_same_state) {
     group->color_mode = color_mode;
