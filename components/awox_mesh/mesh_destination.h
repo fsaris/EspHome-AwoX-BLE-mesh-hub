@@ -32,11 +32,12 @@ class MeshDestination {
   // Product info received (devices) or device type known (groups)
   bool identified = false;
   DeviceInfo *device_info = nullptr;
-  // Home Assistant entity configured for this device or group, nullptr when not in the YAML
+  // ESPHome entity configured for this device or group, nullptr when not in the YAML
   MeshEntity *entity = nullptr;
 
-  // Set when Home Assistant sends a command. A group keeps the commanded state until its members
-  // report the same, so members that have not reported yet do not flip it back.
+  // Set when a command is sent to the mesh (from an API client, the web server or an automation).
+  // A group keeps the commanded state until its members report the same, so members that have
+  // not reported yet do not flip it back.
   bool command_pending = false;
   uint32_t command_time = 0;
 

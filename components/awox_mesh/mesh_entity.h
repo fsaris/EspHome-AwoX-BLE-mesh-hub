@@ -8,7 +8,7 @@ namespace awox_mesh {
 class AwoxMesh;
 class MeshDestination;
 
-/// A Home Assistant entity (light or switch) bound to one mesh device or group.
+/// An ESPHome entity (light or switch) bound to one mesh device or group.
 class MeshEntity {
  public:
   MeshEntity(AwoxMesh *mesh, int dest) : mesh_(mesh), dest_(dest) {}
@@ -18,7 +18,7 @@ class MeshEntity {
   /// Called by the hub once the mesh has reported the device or group this entity controls.
   void set_destination(MeshDestination *destination) { this->destination_ = destination; }
 
-  /// Push the state last reported by the mesh to Home Assistant.
+  /// Publish the state last reported by the mesh on the entity, for every connected client.
   virtual void publish_mesh_state() = 0;
 
  protected:
