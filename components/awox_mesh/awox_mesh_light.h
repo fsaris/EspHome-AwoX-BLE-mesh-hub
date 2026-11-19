@@ -13,6 +13,12 @@
 namespace esphome {
 namespace awox_mesh {
 
+// Values of `type` in the YAML, see DEVICE_TYPES in __init__.py
+static constexpr int DEVICE_TYPE_RGB = 0x01;
+static constexpr int DEVICE_TYPE_DIM = 0x02;
+static constexpr int DEVICE_TYPE_TW = 0x03;
+static constexpr int DEVICE_TYPE_PLUG = 0x04;
+
 /// Placeholder effect: the effect itself runs inside the bulb, write_state() sends the command to start it.
 class AwoxMeshEffect : public light::LightEffect {
  public:

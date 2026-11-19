@@ -33,24 +33,11 @@ awox_mesh:
   allowed_mac_addresses:
     - A4:C1:38:8A:BA:11
 
-  device_info:
-    - product_id: 0x32
-      device_type: RGB
-      manufacturer: EGLO
-      name: Spot 120
-      model: EGLOSpot 120/w
-      icon: mdi:wall-sconce-flat
-    - product_id: 0x85
-      device_type: PLUG
-      manufacturer: EGLO
-      name: EGLO PLUG PLUS
-      model: SMPWBm10DE
-      icon: mdi:power-socket-de
-
   devices:
     - mesh_id: 1
       name: Coffee machine
       type: PLUG
+      icon: mdi:power-socket-de
       area_id: kitchen
       power: {}
       voltage:
@@ -63,6 +50,7 @@ awox_mesh:
     - mesh_id: 3
       name: Kitchen spot
       type: RGB
+      icon: mdi:wall-sconce-flat
     - mesh_id: 4
       name: Hallway
       type: WHITE_TEMP

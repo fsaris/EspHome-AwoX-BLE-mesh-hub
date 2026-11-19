@@ -22,7 +22,6 @@
 #include "mesh_entity.h"
 #include "mesh_connection.h"
 #include "device.h"
-#include "device_info.h"
 #include "group.h"
 
 namespace esphome {
@@ -57,8 +56,6 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   std::string mesh_password = "";
 
   std::string address_prefix = "A4:C1";
-
-  DeviceInfoResolver *device_info_resolver = new DeviceInfoResolver();
 
   bool start_up_delay_done();
 
@@ -104,10 +101,6 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   void set_mesh_password(const std::string &mesh_password) {
     ESP_LOGI("awox.mesh", "password: %s", mesh_password.c_str());
     this->mesh_password = mesh_password;
-  }
-  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer,
-                       const char *icon) {
-    this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
   }
 
   void add_allowed_mesh_id(const int mesh_id) { this->allowed_mesh_ids_.push_back(mesh_id); }

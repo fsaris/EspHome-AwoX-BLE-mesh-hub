@@ -83,21 +83,14 @@ awox_mesh:
   #   - A4:C1:38:8A:BA:11
   #   - A4:C1:38:65:AD:22
 
-  device_info:
-    # Example device type, the 'product_id' is shown in the log for devices that are not configured yet
-    - product_id: 0x32
-      device_type: RGB
-      manufacturer: EGLO
-      name: Spot 120
-      model: EGLOSpot 120/w
-      icon: mdi:wall-sconce-flat
-
   # Mesh devices and groups to show in Home Assistant.
   # Devices and groups that are not listed here are written to the log, ready to copy.
+  # Fill in the type from the product id, see the README or the helper page.
   devices:
     - mesh_id: 12345
       name: Kitchen spot
       type: RGB # RGB, WHITE_TEMP, DIM or PLUG
+      icon: mdi:wall-sconce-flat # optional
 
   groups:
     - group_id: 3

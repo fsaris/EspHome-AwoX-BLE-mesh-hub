@@ -9,7 +9,6 @@
 #include "esphome/core/log.h"
 #include "esphome/components/esp32_ble_client/ble_client_base.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
-#include "device_info.h"
 #include "device.h"
 
 namespace esphome {

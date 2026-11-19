@@ -4,7 +4,6 @@
 #include <math.h>
 #include "mesh_connection.h"
 #include "awox_mesh.h"
-#include "device_info.h"
 #include "helpers.h"
 #include "group.h"
 #include "aes/esp_aes.h"

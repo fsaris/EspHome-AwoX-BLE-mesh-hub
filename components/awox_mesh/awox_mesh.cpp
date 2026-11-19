@@ -191,7 +191,7 @@ void AwoxMesh::loop() {
   }
 
   for (Group *group : this->mesh_groups_) {
-    if (!group->identified && group->device_info != nullptr) {
+    if (!group->identified && group->product_id != 0) {
       group->identified = true;
       if (group->entity == nullptr)
         this->log_unconfigured_group(group);
@@ -396,7 +396,7 @@ Group *AwoxMesh::get_group(int dest, Device *device) {
 
   Group *group = new Group;
   group->group_id = dest;
-  group->device_info = device->device_info;
+  group->product_id = device->product_id;
   this->bind_entity(group);
 
   group->add_device(device);
@@ -476,19 +476,16 @@ int AwoxMesh::count_unconfigured() {
   return count;
 }
 
-// One line of YAML flow style, so it can be copied from the Home Assistant state as is
+// One line of YAML flow style, so it can be copied from the Home Assistant state as is.
+// The type is left empty on purpose: look up the product id in the README or use the helper page.
 static void format_device_entry(char *buffer, size_t size, Device *device) {
-  DeviceInfo *info = device->device_info;
-  const char *icon = info->get_icon();
-  const bool has_icon = icon[0] != '\0';
-  snprintf(buffer, size, "- {mesh_id: %d, name: \"%s %d\", type: %s%s%s%s}  # product 0x%02X, mac %s", device->mesh_id,
-           info->get_name(), device->mesh_id, info->get_type_name(), has_icon ? ", icon: \"" : "",
-           has_icon ? icon : "", has_icon ? "\"" : "", device->product_id, device->address_str().c_str());
+  snprintf(buffer, size, "- {mesh_id: %d, name: \"Device %d\", type: }  # product 0x%02X, mac %s", device->mesh_id,
+           device->mesh_id, device->product_id, device->address_str().c_str());
 }
 
 static void format_group_entry(char *buffer, size_t size, Group *group) {
-  snprintf(buffer, size, "- {group_id: %d, name: \"Group %d\", type: %s}", group->group_id, group->group_id,
-           group->device_info->get_type_name());
+  snprintf(buffer, size, "- {group_id: %d, name: \"Group %d\", type: }  # product 0x%02X", group->group_id,
+           group->group_id, group->product_id);
 }
 
 void AwoxMesh::log_unconfigured_device(Device *device) {
@@ -577,8 +574,8 @@ void AwoxMesh::sync_and_publish_group_state(Group *group) {
   ESP_LOGV(TAG, "Sync %s", group->state_as_string().c_str());
 
   for (Device *device : group->get_devices()) {
-    if (group->device_info == nullptr && device->device_info != nullptr) {
-      group->device_info = device->device_info;
+    if (group->product_id == 0 && device->identified) {
+      group->product_id = device->product_id;
     }
     if (device->online) {
       online = true;
@@ -700,7 +697,6 @@ void AwoxMesh::on_device_identified(Device *device) {
     return;
   }
 
-  device->device_info = this->device_info_resolver->get_by_product_id(device->product_id);
   device->identified = true;
 
   if (device->entity == nullptr)

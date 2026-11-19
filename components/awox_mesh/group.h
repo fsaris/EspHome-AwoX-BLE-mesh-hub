@@ -23,11 +23,14 @@ class Group : public MeshDestination {
 
   uint32_t last_online = 0;
 
+  // Product of the first identified member, only used to suggest the YAML entry
+  int product_id = 0;
+
   int dest() override { return this->group_id + 0x8000; }
 
   const char *type() const override { return "group"; }
 
-  bool can_publish_state() override { return this->device_info != nullptr; };
+  bool can_publish_state() override { return this->product_id != 0; };
 
   std::vector<Group *> get_groups() const override { return std::vector<Group *>{}; };
 

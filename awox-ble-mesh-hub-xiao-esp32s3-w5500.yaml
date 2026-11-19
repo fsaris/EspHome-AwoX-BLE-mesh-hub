@@ -58,15 +58,6 @@ awox_mesh:
 
   # See awox-ble-mesh-hub.yaml and the README for all optional options
 
-  device_info:
-    # Example device type, the 'product_id' is shown in the log for devices that are not configured yet
-    - product_id: 0x32
-      device_type: RGB
-      manufacturer: EGLO
-      name: Spot 120
-      model: EGLOSpot 120/w
-      icon: mdi:wall-sconce-flat
-
   # Mesh devices and groups to show in Home Assistant.
   # Devices and groups that are not listed here are written to the log, ready to copy.
   # devices:

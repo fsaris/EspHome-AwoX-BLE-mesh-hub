@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <vector>
 #include "esphome/core/hal.h"
-#include "device_info.h"
 
 namespace esphome {
 namespace awox_mesh {
@@ -31,7 +30,6 @@ class MeshDestination {
   bool online = false;
   // Product info received (devices) or device type known (groups)
   bool identified = false;
-  DeviceInfo *device_info = nullptr;
   // ESPHome entity configured for this device or group, nullptr when not in the YAML
   MeshEntity *entity = nullptr;
 

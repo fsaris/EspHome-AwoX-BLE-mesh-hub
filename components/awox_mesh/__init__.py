@@ -1,5 +1,4 @@
 import esphome.codegen as cg
-import esphome.config_validation as cv
 from esphome.components import (
     esp32_ble_client,
     esp32_ble_tracker,
@@ -8,6 +7,7 @@ from esphome.components import (
     switch,
     text_sensor,
 )
+import esphome.config_validation as cv
 from esphome.const import (
     CONF_API,
     CONF_AREA_ID,
@@ -41,6 +41,10 @@ from esphome.types import ConfigType
 # Sub-device relation added in ESPHome 2026.11; older versions ignore the key
 CONF_RELATION = "relation"
 DEVICE_RELATION_VIA = "via"
+
+MIGRATION_URL = (
+    "https://github.com/fsaris/EspHome-AwoX-BLE-mesh-hub#migrating-from-device_info"
+)
 
 AUTO_LOAD = [
     "esp32_ble_client",
@@ -244,17 +248,9 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_ALLOWED_ADDRESSES, default=[]): cv.ensure_list(
                 cv.mac_address
             ),
-            cv.Optional(CONF_DEVICE_INFO, default=[]): cv.ensure_list(
-                cv.Schema(
-                    {
-                        cv.Required("product_id"): cv.hex_int_range(min=0x01, max=0xFF),
-                        cv.Required("device_type"): cv.enum(DEVICE_TYPES),
-                        cv.Required("name"): cv.string,
-                        cv.Required("model"): cv.string,
-                        cv.Required("manufacturer"): cv.string,
-                        cv.Optional("icon", default=""): cv.icon,
-                    }
-                )
+            cv.Optional(CONF_DEVICE_INFO): cv.invalid(
+                "'device_info' has been removed. Set 'type' (and 'icon') on each "
+                f"'devices' entry and remove 'device_info'. See {MIGRATION_URL}"
             ),
             cv.Optional(CONF_DEVICES, default=[]): cv.All(
                 cv.ensure_list(DEVICE_SCHEMA), _validate_unique(CONF_MESH_ID)
@@ -339,18 +335,6 @@ async def to_code(config: ConfigType) -> None:
 
     cg.add(var.set_mesh_name(config[CONF_MESH_NAME]))
     cg.add(var.set_mesh_password(config[CONF_MESH_PASSWORD]))
-
-    for device in config[CONF_DEVICE_INFO]:
-        cg.add(
-            var.register_device(
-                device["device_type"],
-                device["product_id"],
-                device["name"],
-                device["model"],
-                device["manufacturer"],
-                device["icon"],
-            )
-        )
 
     for mesh_id in config[CONF_ALLOWED_MESH_IDS]:
         cg.add(var.add_allowed_mesh_id(mesh_id))
