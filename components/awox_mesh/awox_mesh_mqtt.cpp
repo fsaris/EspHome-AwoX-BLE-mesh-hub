@@ -9,7 +9,10 @@
 #include "esphome/components/mqtt/mqtt_const.h"
 #include "esphome/components/mqtt/mqtt_component.h"
 #include "esphome/core/application.h"
+#include "esphome/core/helpers.h"
 #include "esphome/core/log.h"
+#include "esphome/core/macros.h"
+#include "esphome/core/version.h"
 
 #include "awox_mesh_mqtt.h"
 #include "awox_mesh.h"
@@ -18,6 +21,24 @@ namespace esphome {
 namespace awox_mesh {
 
 static const char *const TAG = "awox.mesh.mqtt";
+
+// Uses the non-allocating helpers so this builds on both older ESPHome releases and 2026.11+,
+// where get_mac_address() and str_sanitize() are no longer available through helpers.h.
+static std::string mac_address_str() {
+  char buf[MAC_ADDRESS_BUFFER_SIZE];
+  get_mac_address_into_buffer(buf);
+  return buf;
+}
+
+static std::string sanitized_app_name() {
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2026, 2, 0)
+  char buf[64];
+  str_sanitize_to(buf, App.get_name().c_str());
+  return buf;
+#else
+  return str_sanitize(App.get_name());
+#endif
+}
 
 static int convert_value_to_available_range(int value, int min_from, int max_from, int min_to, int max_to) {
   float normalized = (float) (value - min_from) / (float) (max_from - min_from);
@@ -189,7 +210,7 @@ void AwoxMeshMqtt::publish_state(MeshDestination *mesh_destination) {
 
 void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshConnection *> &connections) {
   const MQTTDiscoveryInfo &discovery_info = global_mqtt_client->get_discovery_info();
-  const std::string sanitized_name = str_sanitize(App.get_name());
+  const std::string sanitized_name = sanitized_app_name();
 
   for (int i = 0; i < connections.size(); i++) {
     global_mqtt_client->publish_json(
@@ -210,7 +231,7 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
 
           // Device
           JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+          device_info[MQTT_DEVICE_IDENTIFIERS] = mac_address_str();
         },
         0, discovery_info.retain);
 
@@ -232,7 +253,7 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
 
           // Device
           JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+          device_info[MQTT_DEVICE_IDENTIFIERS] = mac_address_str();
         },
         0, discovery_info.retain);
 
@@ -254,7 +275,7 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
 
           // Device
           JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+          device_info[MQTT_DEVICE_IDENTIFIERS] = mac_address_str();
         },
         0, discovery_info.retain);
 
@@ -276,7 +297,7 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
 
           // Device
           JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+          device_info[MQTT_DEVICE_IDENTIFIERS] = mac_address_str();
         },
         0, discovery_info.retain);
 
@@ -301,7 +322,7 @@ void AwoxMeshMqtt::publish_connection_sensor_discovery(const std::vector<MeshCon
 
           // Device
           JsonObject device_info = root[MQTT_DEVICE].to<JsonObject>();
-          device_info[MQTT_DEVICE_IDENTIFIERS] = get_mac_address();
+          device_info[MQTT_DEVICE_IDENTIFIERS] = mac_address_str();
         },
         0, discovery_info.retain);
   }
@@ -398,7 +419,7 @@ bool AwoxMeshMqtt::send_discovery(Device *device) {
           device_info[MQTT_DEVICE_MODEL] = std::string(device->device_info->get_model());
         }
         device_info[MQTT_DEVICE_MANUFACTURER] = device->device_info->get_manufacturer();
-        device_info["via_device"] = get_mac_address();
+        device_info["via_device"] = mac_address_str();
         device_info["serial_number"] = "mesh-id " + std::to_string(device->mesh_id);
       },
       0, discovery_info.retain);
@@ -525,7 +546,7 @@ void AwoxMeshMqtt::send_group_discovery(Group *group) {
 
         device_info[MQTT_DEVICE_NAME] = "Group " + std::to_string(group->group_id);
 
-        device_info["via_device"] = get_mac_address();
+        device_info["via_device"] = mac_address_str();
         device_info["serial_number"] = "group-id " + std::to_string(group->group_id);
       },
       0, discovery_info.retain);
