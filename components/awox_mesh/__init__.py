@@ -210,7 +210,7 @@ DEVICE_SCHEMA = _mesh_entity_schema(
 )
 GROUP_SCHEMA = _mesh_entity_schema(
     CONF_GROUP_ID,
-    cv.int_range(min=1, max=0xFF),
+    cv.int_range(min=0, max=0xFF),
     "awox_mesh_group_",
     default_icon="mdi:lightbulb-group",
 )

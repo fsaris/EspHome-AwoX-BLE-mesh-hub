@@ -211,7 +211,7 @@ The hub creates an ESPHome [sub-device](https://esphome.io/components/esphome/#s
 
 #### `groups` _(list - OPTIONAL)_
 
-The mesh groups to make available in Home Assistant. Same options as [`devices`](#devices-list-optional), with `group_id` instead of `mesh_id`. The default `icon` of a group is `mdi:lightbulb-group`.
+The mesh groups to make available in Home Assistant. Same options as [`devices`](#devices-list-optional), with `group_id` (0 to 255) instead of `mesh_id`. Group 0 contains all lights of the mesh. The default `icon` of a group is `mdi:lightbulb-group`.
 
 ###### _Example:_
 ```yaml
@@ -401,9 +401,6 @@ Do this **before** you remove anything. In Home Assistant, go to **Developer too
 {%- endfor %}
 {%- macro entries(list, key) %}
 {%- for e in list | sort(attribute='id') %}
-{%- if e.id == 0 %}
-    # {{ key }} 0 ({{ e.name }}) is left out: group 0 is not supported
-{%- else %}
     - {{ key }}: {{ e.id }}
       name: {{ e.name | tojson }}
       type: {{ e.type }}{{ '  # unknown, choose RGB, WHITE_TEMP, DIM or PLUG' if not e.type else '' }}
@@ -418,7 +415,6 @@ Do this **before** you remove anything. In Home Assistant, go to **Developer too
 {%- endif %}
 {%- if e.voltage %}
       voltage: {}
-{%- endif %}
 {%- endif %}
 {%- endfor %}
 {%- endmacro %}
@@ -440,7 +436,6 @@ awox_mesh:
 Check the result:
 
 - Entries with an empty `type:` had no light or switch in Home Assistant. Fill in the type yourself, see [Devices](#devices).
-- Group 0 is left out, groups need an id from 1 up.
 - Mesh devices that never showed up in Home Assistant are not in the list. The hub writes these to the log after flashing, see [Devices](#devices).
 
 #### 2. Update the YAML and flash the hub

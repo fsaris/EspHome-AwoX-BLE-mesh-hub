@@ -59,6 +59,9 @@ awox_mesh:
       type: DIM
 
   groups:
+    - group_id: 0
+      name: All lights
+      type: RGB
     - group_id: 3
       name: Living room
       type: RGB
