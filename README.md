@@ -4,6 +4,8 @@ A ESPhome component (https://esphome.io/components/external_components.html#git)
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
+Coming from the older MQTT version of this hub? See [Migrating from the MQTT version](#migrating-from-the-mqtt-version): Home Assistant can write the new config for you, with the names and areas you already gave your devices.
+
 ### Devices
 
 Each mesh device you want in Home Assistant is listed under [`devices`](#devices-list-optional) in the YAML. Every entry becomes its own device in Home Assistant (connected through the hub) with one light or switch.
@@ -341,6 +343,212 @@ Steps:
 3. Remove the whole `device_info:` block and flash the hub.
 4. Devices that are not in your YAML yet are written to the log with an empty `type:`. Paste these lines into the [helper](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/#devices). You can also paste your old `device_info` block there, so the helper knows the products that are not in the known products list.
 5. Did you have a product in `device_info` that is not in the [known products](#devices) list? Please open an issue, so it can be added for everyone.
+
+
+### Migrating from the MQTT version
+
+The older version of this hub sent its own MQTT discovery messages, and Home Assistant created a device for each mesh device and group. The new version needs the devices in the YAML (see [Devices](#devices)). Home Assistant still knows all your old devices, with the names and areas you gave them, so it can write most of the new config for you. Afterwards the old MQTT messages are removed from the broker, so the old devices disappear from Home Assistant.
+
+Do the steps in this order: step 1 needs the old devices, and step 3 removes them.
+
+#### 1. Let Home Assistant write the new config
+
+Do this **before** you remove anything. In Home Assistant, go to **Developer tools** > **Template**, and paste the template below in the editor. The result on the right is the new config: the `devices` and `groups` with your own names, the `type` (from the features of the old light or switch), the `icon`, the `area_id`, and `power`/`voltage` for plugs that had these sensors. It also lists the areas you need under `esphome:`.
+
+<details>
+  <summary>Template</summary>
+
+```jinja
+{#- Builds the awox_mesh devices/groups config from the old MQTT devices in Home Assistant -#}
+{%- set ns = namespace(devices=[], groups=[], areas={}) %}
+{%- for dev in integration_entities('mqtt') | map('device_id') | reject('none') | unique %}
+  {%- set id = namespace(mesh=none, group=none) %}
+  {%- for ident in device_attr(dev, 'identifiers') %}
+    {%- set value = ident[1] | string %}
+    {%- if value is match('esp-awox-mesh-group-[0-9]+$') %}{% set id.group = value.split('-')[-1] | int %}
+    {%- elif value is match('esp-awox-mesh-[0-9]+$') %}{% set id.mesh = value.split('-')[-1] | int %}{% endif %}
+  {%- endfor %}
+  {%- if id.mesh is not none or id.group is not none %}
+    {%- set entities = device_entities(dev) %}
+    {%- set main = (entities | select('match', '(light|switch)\\.') | list + [none]) | first %}
+    {%- set modes = (state_attr(main, 'supported_color_modes') or []) if main else [] %}
+    {%- if main and main.startswith('switch.') %}{% set type = 'PLUG' %}
+    {%- elif 'rgb' in modes %}{% set type = 'RGB' %}
+    {%- elif 'color_temp' in modes %}{% set type = 'WHITE_TEMP' %}
+    {%- elif modes %}{% set type = 'DIM' %}
+    {%- else %}{% set type = '' %}{% endif %}
+    {%- set area = area_id(dev) %}
+    {%- if area %}
+      {%- set esphome_area = area_name(area) | slugify %}
+      {%- set esphome_area = ('area_' ~ esphome_area) if esphome_area[:1] is match('[0-9]') else esphome_area %}
+      {%- set ns.areas = dict(ns.areas, **{esphome_area: area_name(area)}) %}
+    {%- endif %}
+    {%- set sensors = entities | select('match', 'sensor\\.') | map('state_attr', 'device_class') | list %}
+    {%- set entry = dict(
+      id=id.mesh if id.mesh is not none else id.group,
+      name=device_attr(dev, 'name_by_user') or device_attr(dev, 'name'),
+      type=type,
+      icon=state_attr(main, 'icon') if main else none,
+      area=esphome_area if area else none,
+      power='power' in sensors,
+      voltage='voltage' in sensors,
+      model=device_attr(dev, 'model')) %}
+    {%- if id.mesh is not none %}{% set ns.devices = ns.devices + [entry] %}
+    {%- else %}{% set ns.groups = ns.groups + [entry] %}{% endif %}
+  {%- endif %}
+{%- endfor %}
+{%- macro entries(list, key) %}
+{%- for e in list | sort(attribute='id') %}
+{%- if e.id == 0 %}
+    # {{ key }} 0 ({{ e.name }}) is left out: group 0 is not supported
+{%- else %}
+    - {{ key }}: {{ e.id }}
+      name: {{ e.name | tojson }}
+      type: {{ e.type }}{{ '  # unknown, choose RGB, WHITE_TEMP, DIM or PLUG' if not e.type else '' }}
+{%- if e.icon and not (key == 'group_id' and e.icon == 'mdi:lightbulb-group') %}
+      icon: {{ e.icon }}
+{%- endif %}
+{%- if e.area %}
+      area_id: {{ e.area }}
+{%- endif %}
+{%- if e.power %}
+      power: {}
+{%- endif %}
+{%- if e.voltage %}
+      voltage: {}
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+{%- if ns.areas %}
+esphome:
+  areas:
+{%- for area_id, area_name in ns.areas | dictsort %}
+    - id: {{ area_id }}
+      name: {{ area_name | tojson }}
+{%- endfor %}
+
+{% endif -%}
+awox_mesh:
+  devices:{{ entries(ns.devices, 'mesh_id') }}
+  groups:{{ entries(ns.groups, 'group_id') }}
+```
+</details>
+
+Check the result:
+
+- Entries with an empty `type:` had no light or switch in Home Assistant. Fill in the type yourself, see [Devices](#devices).
+- Group 0 is left out, groups need an id from 1 up.
+- Mesh devices that never showed up in Home Assistant are not in the list. The hub writes these to the log after flashing, see [Devices](#devices).
+
+#### 2. Update the YAML and flash the hub
+
+1. Copy the `areas` into your `esphome:` section and the `devices` and `groups` into your `awox_mesh:` section.
+2. Make sure `esphome:` has a `friendly_name`. It is needed because the entities of the mesh devices have no name of their own.
+3. Remove `device_info` (see [Migrating from `device_info`](#migrating-from-device_info)).
+4. Choose `api:` (recommended) or `mqtt:`, see [MQTT instead of the native API](#mqtt-instead-of-the-native-api).
+5. Flash the hub. When you use the native API, wait with adding the hub to the ESPHome integration until step 3 is done.
+
+#### 3. Remove the old MQTT messages
+
+The old messages are kept by the MQTT broker (retained messages), so the old devices stay in Home Assistant until these messages are removed. The script below finds them for all old AwoX devices in Home Assistant and removes them by sending an empty message to each topic. Home Assistant then removes the old devices.
+
+Only run it **after** the hub runs the new version, otherwise the old version sends the messages again.
+
+1. In Home Assistant, go to **Settings** > **Automations & scenes** > **Scripts** > **Create script** > **Create new script**. Open the menu (three dots), choose **Edit in YAML**, paste the script below and save.
+2. Run the script with **Only show the topics** turned on and your **Hub name** (the `name` under `esphome:`). A notification lists the topics that will be removed. Check that the hub name in the topics is right.
+3. Run it again with **Only show the topics** turned off. The old devices disappear from the MQTT integration.
+4. Delete the script.
+
+<details>
+  <summary>Script</summary>
+
+```yaml
+alias: Remove old AwoX MQTT messages
+description: >-
+  Removes the messages that the old (MQTT) version of the AwoX BLE mesh hub left on the MQTT broker,
+  so Home Assistant removes the old MQTT devices.
+fields:
+  hub_name:
+    name: Hub name
+    description: The `name` under `esphome:` in the YAML of the hub.
+    required: true
+    selector:
+      text: {}
+  topic_prefix:
+    name: Topic prefix
+    description: Only needed when you set `topic_prefix` under `mqtt:`. Empty means the hub name.
+    selector:
+      text: {}
+  discovery_prefix:
+    name: Discovery prefix
+    description: Only needed when you changed the MQTT discovery prefix. Empty means homeassistant.
+    selector:
+      text: {}
+  dry_run:
+    name: Only show the topics
+    description: Shows the topics in a notification, without removing anything.
+    default: true
+    selector:
+      boolean: {}
+sequence:
+  - variables:
+      topics: >-
+        {%- set disc = discovery_prefix | default('homeassistant', true) %}
+        {%- set prefix = topic_prefix | default(hub_name, true) %}
+        {%- set ns = namespace(topics=[]) %}
+        {%- for dev in integration_entities('mqtt') | map('device_id') | reject('none') | unique %}
+          {%- set id = namespace(mesh=none, group=none, mac=none) %}
+          {%- for ident in device_attr(dev, 'identifiers') %}
+            {%- set value = ident[1] | string %}
+            {%- if value is match('esp-awox-mesh-group-[0-9]+$') %}{% set id.group = value.split('-')[-1] | int %}
+            {%- elif value is match('esp-awox-mesh-[0-9]+$') %}{% set id.mesh = value.split('-')[-1] | int %}
+            {%- elif value is match('([0-9A-F]{2}:){5}[0-9A-F]{2}$') %}{% set id.mac = value | replace(':', '') %}{% endif %}
+          {%- endfor %}
+          {%- if id.mesh is not none and id.mac %}
+            {%- set ns.topics = ns.topics + [
+              disc ~ '/light/awox-' ~ id.mac ~ '/config',
+              disc ~ '/switch/awox-' ~ id.mac ~ '/config',
+              disc ~ '/sensor/awox-' ~ id.mac ~ '-power/config',
+              disc ~ '/sensor/awox-' ~ id.mac ~ '-voltage/config',
+              prefix ~ '/' ~ id.mesh ~ '/state',
+              prefix ~ '/' ~ id.mesh ~ '/availability'] %}
+          {%- elif id.group is not none %}
+            {%- set ns.topics = ns.topics + [
+              disc ~ '/light/group-' ~ id.group ~ '/config',
+              prefix ~ '/' ~ (id.group + 32768) ~ '/state',
+              prefix ~ '/' ~ (id.group + 32768) ~ '/availability'] %}
+          {%- endif %}
+        {%- endfor %}
+        {%- for i in range(3) %}
+          {%- for kind in ['devices', 'mesh-ids', 'mesh-id', 'mac'] %}
+            {%- set ns.topics = ns.topics + [disc ~ '/sensor/' ~ hub_name ~ '/connection-' ~ i ~ '-' ~ kind ~ '/config'] %}
+          {%- endfor %}
+          {%- set ns.topics = ns.topics + [disc ~ '/binary_sensor/' ~ hub_name ~ '/connection-' ~ i ~ '-connected/config'] %}
+        {%- endfor %}
+        {{ ns.topics + [prefix ~ '/connected', prefix ~ '/connection_status'] }}
+  - if:
+      - condition: template
+        value_template: "{{ dry_run | default(true) }}"
+    then:
+      - action: persistent_notification.create
+        data:
+          title: "Old AwoX MQTT topics ({{ topics | count }})"
+          message: '- {{ topics | join("\n- ") }}'
+    else:
+      - repeat:
+          for_each: "{{ topics }}"
+          sequence:
+            - action: mqtt.publish
+              data:
+                topic: "{{ repeat.item }}"
+                payload: ""
+                retain: true
+mode: single
+```
+</details>
+
+When you then add the hub to Home Assistant, the new entities normally get the same entity ids as the old ones (the name of the device), so automations and dashboards keep working. If an entity got `_2` at the end of its id, the old entity still existed. Remove the old device from the MQTT integration, and rename the entity id in Home Assistant.
 
 
 ### General YAML / Setup remarks

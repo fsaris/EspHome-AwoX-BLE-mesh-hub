@@ -34,6 +34,7 @@ from esphome.const import (
     UNIT_VOLT,
     UNIT_WATT,
 )
+from esphome.core import CORE
 from esphome.core.config import FRIENDLY_NAME_MAX_LEN, Area, Device
 import esphome.final_validate as fv
 from esphome.types import ConfigType
@@ -215,6 +216,19 @@ GROUP_SCHEMA = _mesh_entity_schema(
 )
 
 
+def _require_friendly_name(config: ConfigType) -> ConfigType:
+    """The light or switch of an entry has no name of its own, ESPHome then needs a friendly_name."""
+    if CORE.friendly_name is None and (
+        config.get(CONF_DEVICES) or config.get(CONF_GROUPS)
+    ):
+        raise cv.Invalid(
+            "Set 'friendly_name' under 'esphome:', for example 'friendly_name: AwoX mesh hub'. "
+            "It is needed for the 'devices' and 'groups': each entry becomes a device with "
+            "the 'name' of the entry, and its light or switch has no name of its own."
+        )
+    return config
+
+
 def _validate_unique(key: str):
     def validator(entries: list[ConfigType]) -> list[ConfigType]:
         seen = set()
@@ -228,6 +242,7 @@ def _validate_unique(key: str):
 
 
 CONFIG_SCHEMA = cv.All(
+    _require_friendly_name,
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(Awox),
