@@ -1,0 +1,60 @@
+#pragma once
+
+#ifdef USE_ESP32
+#ifdef USE_LIGHT
+
+#include "esphome/components/light/light_effect.h"
+#include "esphome/components/light/light_output.h"
+#include "esphome/components/light/light_state.h"
+
+#include "mesh_destination.h"
+#include "mesh_entity.h"
+
+namespace esphome {
+namespace awox_mesh {
+
+// Values of `type` in the YAML, see DEVICE_TYPES in __init__.py
+static constexpr int DEVICE_TYPE_RGB = 0x01;
+static constexpr int DEVICE_TYPE_DIM = 0x02;
+static constexpr int DEVICE_TYPE_TW = 0x03;
+static constexpr int DEVICE_TYPE_PLUG = 0x04;
+
+/// Placeholder effect: the effect itself runs inside the bulb, write_state() sends the command to start it.
+class AwoxMeshEffect : public light::LightEffect {
+ public:
+  explicit AwoxMeshEffect(const char *name) : light::LightEffect(name) {}
+  void apply() override {}
+};
+
+class AwoxMeshLight : public light::LightOutput, public MeshEntity {
+ public:
+  AwoxMeshLight(AwoxMesh *mesh, int dest, int device_type) : MeshEntity(mesh, dest), device_type_(device_type) {}
+
+  light::LightTraits get_traits() override;
+  void setup_state(light::LightState *state) override;
+  void write_state(light::LightState *state) override;
+
+  void publish_mesh_state() override;
+
+ protected:
+  bool has_color_() const;
+  bool has_color_temperature_() const;
+
+  const int device_type_;
+  light::LightState *state_{nullptr};
+  // Commands are only sent once the mesh has reported the current state, so a restored or
+  // default state at boot never overrides what the bulb is actually doing.
+  bool synced_{false};
+  MeshDestinationState last_published_{};
+
+  AwoxMeshEffect color_loop_effect_{"Color loop"};
+  AwoxMeshEffect candle_effect_{"Candle"};
+  // Since ESPHome 2026.11 LightState keeps a pointer to this table instead of copying it
+  light::LightEffect *effects_[2]{&this->color_loop_effect_, &this->candle_effect_};
+};
+
+}  // namespace awox_mesh
+}  // namespace esphome
+
+#endif  // USE_LIGHT
+#endif  // USE_ESP32

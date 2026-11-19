@@ -1,741 +1,158 @@
-# ESPHome component: AwoX BLE mesh (mqtt) hub
+# ESPHome component: AwoX BLE mesh hub
 
-A ESPhome component (https://esphome.io/components/external_components.html#git) to create a MQTT hub for your AwoX BLE mesh devices.
+A ESPhome component (https://esphome.io/components/external_components.html#git) to create a hub for your AwoX BLE mesh devices. The devices are made available to Home Assistant through the native ESPHome API.
 
 You will need your mesh credentials, easiest way to find/get these is to use [this form](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/) to read them from your AwoX Cloud account.
 
+Coming from the older MQTT version of this hub? See [Migrating from the MQTT version](#migrating-from-the-mqtt-version): Home Assistant can write the new config for you, with the names and areas you already gave your devices.
+
 ### Devices
 
-When setup the component will scan for AwoX BLE mesh devices and publish [discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) messages for each device on MQTT. When using HomeAssistant the device will show up under the MQTT integration. And you can (re)name the devices there.
+Each mesh device you want in Home Assistant is listed under [`devices`](#devices-list-optional) in the YAML. Every entry becomes its own device in Home Assistant (connected through the hub) with one light or switch.
 
-Each device type/product can be configured by `product_id` so it gets the correct features in HomeAssistant.
-
-The `product id` needed for the configuration is shown in model string of the mqtt discovery message/HomeAssistant device info. [See yaml options](#device_info)
-
-<details>
-  <summary>Config examples known devices</summary>
-
-```yaml
-device_info:
--  product_id: 0x13
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 9
-   model: SMLm_C9
-   manufacturer: AwoX
-
--  product_id: 0x14
-   device_type: WHITE_TEMP
-   name: SmartLIGHT White Mesh 13W
-   model: SMLm_W13
-   manufacturer: AwoX
-
--  product_id: 0x15
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 13W
-   model: SMLm_C13
-   manufacturer: AwoX
-
--  product_id: 0x16
-   device_type: WHITE_TEMP
-   name: SmartLIGHT White Mesh 15W
-   model: SMLm_W15
-   manufacturer: AwoX
-
--  product_id: 0x17
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 15W
-   model: SMLm_C15
-   manufacturer: AwoX
-
--  product_id: 0x21
-   device_type: WHITE_TEMP
-   name: SmartLIGHT White Mesh 9W
-   model: SSMLm_w9
-   manufacturer: AwoX
-
--  product_id: 0x22
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 9W
-   model: SSMLm_c9
-   manufacturer: AwoX
-
--  product_id: 0x23
-   device_type: RGB
-   name: EGLOBulb A60 9W
-   model: ESMLm_c9
-   manufacturer: EGLO
-
--  product_id: 0x24
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 9W
-   model: KSMLm_c9
-   manufacturer: KERIA
-
--  product_id: 0x25
-   device_type: RGB
-   name: EGLOPanel 30X30
-   model: EPanel_300
-   manufacturer: EGLO
-
--  product_id: 0x26
-   device_type: RGB
-   name: EGLOPanel 60X60
-   model: EPanel_600
-   manufacturer: EGLO
-
--  product_id: 0x27
-   device_type: RGB
-   name: EGLO Ceiling DOWNLIGHT
-   model: EMod_Ceil
-   manufacturer: EGLO
-
--  product_id: 0x29
-   device_type: RGB
-   name: EGLOBulb G95 13W
-   model: ESMLm_c13g
-   manufacturer: EGLO
-
--  product_id: 0x2A
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 13W Globe
-   model: KSMLm_c13g
-   manufacturer: KERIA
-
--  product_id: 0x2B
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 13W Globe
-   model: SMLm_c13g
-   manufacturer: AwoX
-
--  product_id: 0x30
-   device_type: RGB
-   name: EGLOPanel 30X120
-   model: EPanel_120
-   manufacturer: EGLO
-
--  product_id: 0x32
-   device_type: RGB
-   name: Spot 120
-   model: EGLOSpot 120/w
-   manufacturer: EGLO
-   icon: mdis:wall-sconce-flat
-
--  product_id: 0x33
-   device_type: RGB
-   name: Spot 170
-   model: EGLOSpot 170/w
-   manufacturer: EGLO
-   icon: mdi:wall-sconce-flat
-
--  product_id: 0x34
-   device_type: RGB
-   name: Spot 225
-   model: EGLOSpot 225/w
-   manufacturer: EGLO
-   icon: mdi:wall-sconce-flat
-
--  product_id: 0x35
-   device_type: RGB
-   name: Giron-C 17W
-   model: EGLO 32589
-   manufacturer: EGLO
-   icon: mdi:wall-sconce-flat
-
--  product_id: 0x36
-   device_type: RGB
-   name: EGLO Ceiling GIRON 30
-   model: ECeil_g38
-   manufacturer: EGLO
-
--  product_id: 0x37
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 5W GU10
-   model: SMLm_c5_GU10
-   manufacturer: AwoX
-
--  product_id: 0x38
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 5W E14
-   model: SMLm_c5_E14
-   manufacturer: AwoX
-
--  product_id: 0x3A
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 5W GU10
-   model: KSMLm_c5_GU10
-   manufacturer: KERIA
-
--  product_id: 0x3B
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 5W E14
-   model: KSMLm_c5_E14
-   manufacturer: KERIA
-
--  product_id: 0x3C
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 5W GU10
-   model: ESMLm_c5_GU10
-   manufacturer: EGLO
-
--  product_id: 0x3D
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 5W E14
-   model: ESMLm_c5_E14
-   manufacturer: EGLO
-
--  product_id: 0x3F
-   device_type: RGB
-   name: EGLO Surface round
-   model: EFueva_225r
-   manufacturer: EGLO
-
--  product_id: 0x40
-   device_type: RGB
-   name: EGLO Surface square
-   model: EFueva_225s
-   manufacturer: EGLO
-
--  product_id: 0x41
-   device_type: RGB
-   name: EGLO Surface round
-   model: EFueva_300r
-   manufacturer: EGLO
-
--  product_id: 0x42
-   device_type: RGB
-   name: EGLO Surface square
-   model: EFueva_300s
-   manufacturer: EGLO
-
--  product_id: 0x43
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 9W
-   model: SMLm_c9s
-   manufacturer: AwoX
-
--  product_id: 0x44
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 13W
-   model: SMLm_c13gs
-   manufacturer: AwoX
-
--  product_id: 0x45
-   device_type: RGB
-   name: EGLOBulb A60 9W
-   model: ESMLm_c9s
-   manufacturer: EGLO
-
--  product_id: 0x46
-   device_type: RGB
-   name: EGLOBulb G95 13W
-   model: ESMLm_c13gs
-   manufacturer: EGLO
-
--  product_id: 0x47
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 9W
-   model: KSMLm_c9s
-   manufacturer: KERIA
-
--  product_id: 0x48
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 13W Glob
-   model: KSMLm_c13gs
-   manufacturer: KERIA
-
--  product_id: 0x49
-   device_type: DIM
-   name: EGLOBulb A60 Warm
-   model: ESMLm_w9w
-   manufacturer: EGLO
-
--  product_id: 0x4A
-   device_type: DIM
-   name: EGLOBulb A60 Neutral
-   model: ESMLm_w9n
-   manufacturer: EGLO
-
--  product_id: 0x4B
-   device_type: RGB
-   name: EGLO Ceiling
-   model: ECeiling_30
-   manufacturer: EGLO
-
--  product_id: 0x4C
-   device_type: RGB
-   name: EGLO Pendant
-   model: EPendant_30
-   manufacturer: EGLO
-
--  product_id: 0x4D
-   device_type: RGB
-   name: EGLO Pendant
-   model: EPendant_20
-   manufacturer: EGLO
-
--  product_id: 0x4E
-   device_type: RGB
-   name: EGLO Stripled 3m
-   model: EStrip_3m
-   manufacturer: EGLO
-
--  product_id: 0x4F
-   device_type: RGB
-   name: EGLO Stripled 5m
-   model: EStrip_5m
-   manufacturer: EGLO
-
--  product_id: 0x50
-   device_type: DIM
-   name: Outdoor
-   model: EOutdoor_w14w
-   manufacturer: EGLO
-
--  product_id: 0x51
-   device_type: RGB
-   name: EGLOSpot
-   model: ETriSpot_85
-   manufacturer: EGLO
-
--  product_id: 0x53
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 9W
-   model: SMLm_c9i
-   manufacturer: AwoX
-
--  product_id: 0x54
-   device_type: RGB
-   name: EGLOBulb A60 9W
-   model: ESMLm_c9i
-   manufacturer: EGLO
-
--  product_id: 0x55
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 9W
-   model: KSMLm_c9i
-   manufacturer: KERIA
-
--  product_id: 0x56
-   device_type: RGB
-   name: EGLOPanel 62X62
-   model: EPanel_620
-   manufacturer: EGLO
-
--  product_id: 0x57
-   device_type: RGB
-   name: EGLOPanel 45X45
-   model: EPanel_450
-   manufacturer: EGLO
-
--  product_id: 0x59
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 13W Globe
-   model: SMLm_c13gi
-   manufacturer: AwoX
-
--  product_id: 0x5A
-   device_type: RGB
-   name: EGLOBulb G95 13W
-   model: ESMLm_c13gi
-   manufacturer: EGLO
-
--  product_id: 0x5B
-   device_type: RGB
-   name: Keria SmartLIGHT Color Mesh 13W Globe
-   model: KSMLm_c13gi
-   manufacturer: KERIA
-
--  product_id: 0x5C
-   device_type: RGB
-   name: SmartLIGHT Color Mesh 9W
-   model: SSMLm_c9i
-   manufacturer: AwoX
-
--  product_id: 0x64
-   device_type: WHITE_TEMP
-   name: SmartLIGHT White Mesh 9W
-   model: SMLm_w9
-   manufacturer: AwoX
-
--  product_id: 0x65
-   device_type: WHITE_TEMP
-   name: SmartLIGHT White Mesh 9W
-   model: ESMLm_w9
-   manufacturer: EGLO
-
--  product_id: 0x69
-   device_type: RGB
-   name: Ceiling GIRON 60
-   model: ECeil_g60
-   manufacturer: EGLO
-
--  product_id: 0x6A
-   device_type: WHITE_TEMP
-   name: SmartLIGHT Bulb A60 Warm
-   model: SMLm_w9w
-   manufacturer: AwoX
-
--  product_id: 0x6F
-   device_type: WHITE_TEMP
-   name: EGLOBulb Filament G80
-   model: ESMLFm-w6-G80
-   manufacturer: EGLO
-
--  product_id: 0x71
-   device_type: WHITE_TEMP
-   name: EGLOBulb Filament ST64
-   model: ESMLFm-w6-ST64
-   manufacturer: EGLO
-
--  product_id: 0x75
-   device_type: WHITE_TEMP
-   name: EGLOBulb Filament G95
-   model: ESMLFm-w6-G95
-   manufacturer: EGLO
-
--  product_id: 0x77
-   device_type: RGB
-   name: EGLO Spot
-   model: ESpot_c5
-   manufacturer: EGLO
-
--  product_id: 0x78
-   device_type: RGB
-   name: EGLO Fraioli
-   model: EFraioli_c17
-   manufacturer: EGLO
-
--  product_id: 0x79
-   device_type: RGB
-   name: EGLO Frattina
-   model: EFrattina_c18
-   manufacturer: EGLO
-
--  product_id: 0x7A
-   device_type: RGB
-   name: EGLO Frattina
-   model: EFrattina_c27
-   manufacturer: EGLO
-
--  product_id: 0x7B
-   device_type: RGB
-   name: EGLOPanel 30 Round
-   model: EPanel_r300
-   manufacturer: EGLO
-
--  product_id: 0x7C
-   device_type: RGB
-   name: EGLOPanel 45 Round
-   model: EPanel_r450
-   manufacturer: EGLO
-
--  product_id: 0x7D
-   device_type: RGB
-   name: EGLOPanel 60 Round
-   model: EPanel_r600
-   manufacturer: EGLO
-
--  product_id: 0x7E
-   device_type: RGB
-   name: EGLOPanel 10X120
-   model: EPanel_120_10
-   manufacturer: EGLO
-
--  product_id: 0x80
-   device_type: WHITE_TEMP
-   name: EPanel white round
-   model: EPanel_w_round
-   manufacturer: EGLO
-
--  product_id: 0x81
-   device_type: WHITE_TEMP
-   name: EPanel white square
-   model: EPanel_w_square
-   manufacturer: EGLO
-
--  product_id: 0x82
-   device_type: WHITE_TEMP
-   name: EPanel white rectangle
-   model: EPanel_w_rect
-   manufacturer: EGLO
-
--  product_id: 0x83
-   device_type: WHITE_TEMP
-   name: ECeiling white round
-   model: ECeiling-w
-   manufacturer: EGLO
-
--  product_id: 0x87
-   device_type: WHITE_TEMP
-   name: EGLO Tunable White
-   model: EDoubleWhite
-   manufacturer: EGLO
-
--  product_id: 0x88
-   device_type: RGB
-   name: EGLO Ceiling GIRON 80
-   model: ECeil_g80
-   manufacturer: EGLO
-
--  product_id: 0x89
-   device_type: WHITE_TEMP
-   name: Outdoor Marchesa-C
-   model: EMarchesa_C
-   manufacturer: EGLO
-
--  product_id: 0x8A
-   device_type: WHITE_TEMP
-   name: Outdoor Francari-C
-   model: EFrancari_C
-   manufacturer: EGLO
-
--  product_id: 0x92
-   device_type: RGB
-   name: EPanel square
-   model: EPanel_36W_square
-   manufacturer: EGLO
-
--  product_id: 0x94
-   device_type: DIM
-   name: EGLOBulb Filament ST64
-   model: ESMLFm-w6w-ST64
-   manufacturer: EGLO
-
--  product_id: 0x95
-   device_type: DIM
-   name: EGLOBulb Filament G95
-   model: ESMLFm-w6w-G95
-   manufacturer: EGLO
-
--  product_id: 0x96
-   device_type: RGB
-   name: EGLO RGB+TW
-   model: EGLO-RGB-TW
-   manufacturer: EGLO
-
--  product_id: 0x97
-   device_type: WHITE_TEMP
-   name: EGLO Tunable White
-   model: EGLO-TW
-   manufacturer: EGLO
-
--  product_id: 0x99
-   device_type: RGB
-   name: EGLO RGB+TW
-   model: EGLO-RGB-TW
-   manufacturer: EGLO
-
--  product_id: 0x9A
-   device_type: WHITE_TEMP
-   name: EGLO Tunable White
-   model: JBT_Gen_CCT_1
-   manufacturer: EGLO
-
--  product_id: 0x9B
-   device_type: DIM
-   name: EGLO Tunable White
-   model: JBT_Gen_Dim_1
-   manufacturer: EGLO
-
--  product_id: 0xA1
-   device_type: RGB
-   name: EGLOLed Relax
-   model: ELedRelax
-   manufacturer: EGLO
-
--  product_id: 0xA2
-   device_type: RGB
-   name: EGLOLed Stripe
-   model: ELedStripe
-   manufacturer: EGLO
-
--  product_id: 0xA3
-   device_type: RGB
-   name: EGLOLed Plus
-   model: ELedPlus
-   manufacturer: EGLO
-
--  product_id: 0xA4
-   device_type: WHITE_TEMP
-   name: EGLOLed Plus TW
-   model: ELedPlus-TW
-   manufacturer: EGLO
-
--  product_id: 0xA5
-   device_type: DIM
-   name: EGLOLed Plus Dimmable
-   model: ELedPlus-Dimm
-   manufacturer: EGLO
-
--  product_id: 0xA6
-   device_type: WHITE_TEMP
-   name: EGLOBulb
-   model: ESMLFm-w6-TW
-   manufacturer: EGLO
-
--  product_id: 0xA7
-   device_type: DIM
-   name: EGLOBulb
-   model: ESMLFm-w6-Dimm
-   manufacturer: EGLO
-
--  product_id: 0xA8
-   device_type: RGB
-   name: ECeiling square
-   model: ECeiling-24W-square
-   manufacturer: EGLO
-
--  product_id: 0xA9
-   device_type: RGB
-   name: EGLO RGB+TW
-   model: EGLO-RGB-TW-IPSU
-   manufacturer: EGLO
-
--  product_id: 0xAA
-   device_type: WHITE_TEMP
-   name: EGLO Tunable White
-   model: EGLO-TW-IPSU
-   manufacturer: EGLO
-
--  product_id: 0xAC
-   device_type: RGB
-   name: EGLO frameless
-   model: EPanel-Frameless
-   manufacturer: EGLO
-
--  product_id: 0xAD
-   device_type: WHITE_TEMP
-   name: EGLO Tunable White
-   model: EDoubleWhite-ipsu
-   manufacturer: EGLO
-
--  product_id: 0x97
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10AUS
-   manufacturer: EGLO
-   icon: mdi:power-socket-au
-
--  product_id: 0x9E
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10AUSb
-   manufacturer: EGLO
-   icon: mdi:power-socket-au
-
--  product_id: 0x90
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10CH
-   manufacturer: EGLO
-   icon: mdi:power-socket-ch
-
--  product_id: 0xA0
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10CHb
-   manufacturer: EGLO
-   icon: mdi:power-socket-ch
-
--  product_id: 0x67
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10FR
-   manufacturer: EGLO
-   icon: mdi:power-socket-fr
-
--  product_id: 0x84
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10FRa
-   manufacturer: EGLO
-   icon: mdi:power-socket-fr
-
--  product_id: 0x9C
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10FRb
-   manufacturer: EGLO
-   icon: mdi:power-socket-fr
-
--  product_id: 0x68
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10GE
-   manufacturer: EGLO
-   icon: mdi:power-socket-de
-
--  product_id: 0x85
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10GEa
-   manufacturer: EGLO
-   icon: mdi:power-socket-de
-
--  product_id: 0x9D
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10GEb
-   manufacturer: EGLO
-   icon: mdi:power-socket-de
-
--  product_id: 0x8F
-   device_type: PLUG
-   name:  EGLO PLUG PLUS
-   model:  SMPWBm10UK
-   manufacturer: EGLO
-   icon: mdi:power-socket-uk
-
--  product_id: 0x9F
-   device_type: PLUG
-   name: EGLO PLUG PLUS
-   model: SMPWBm10UKb
-   manufacturer: EGLO
-   icon: mdi:power-socket-uk
-
--  product_id: 0x8B
-   device_type: PLUG
-   name: EGLO PLUG
-   model: ESMP-Bm10-AUS
-   manufacturer: EGLO
-   icon: mdi:power-socket-au
-
--  product_id: 0x8D
-   device_type: PLUG
-   name: EGLO PLUG
-   model: ESMP-Bm10-CH
-   manufacturer: EGLO
-   icon: mdi:power-socket-ch
-
--  product_id: 0x62
-   device_type: PLUG
-   name: EGLO PLUG
-   model: ESMP-Bm10-FR
-   manufacturer: EGLO
-   icon: mdi:power-socket-fr
-
--  product_id: 0x63
-   device_type: PLUG
-   name: EGLO PLUG
-   model: ESMP-Bm10-GE
-   manufacturer: EGLO
-   icon: mdi:power-socket-de
-
--  product_id: 0x8C
-   device_type: PLUG
-   name: EGLO PLUG
-   model: ESMP-Bm10-UK
-   manufacturer: EGLO
-   icon: mdi:power-socket-uk
+The native API can only offer entities that are known when the firmware is compiled, so devices can not be added automatically like with MQTT discovery. To make this easy the hub still finds all mesh devices, and for each device that is not in your YAML it writes a ready to copy entry to the log:
 
 ```
+[I][awox.mesh]: Mesh device 12345 is not configured. Add it to awox_mesh -> devices:
+  - {mesh_id: 12345, name: "Device 12345", type: }  # product 0x32, mac A4:C1:38:8A:BA:11
+```
+
+The same entries are also published one by one to the optional [`last_unconfigured_device`](#last_unconfigured_device-text-sensor-optional) sensor, so you can copy them from its history in Home Assistant.
+
+So the first time: flash the hub, copy the entries from the sensor history or the log into your YAML, give them a nice name and flash again. The list is printed again every time you open the logs. The optional [`unconfigured_devices`](#active_connections-online_devices-unconfigured_devices-sensor-optional) sensor shows how many devices are still missing.
+
+The `type` in these entries is empty: fill it in before you flash again, ESPHome will not accept the entry without it. The type depends on the product, shown as `product 0x..` at the end of the line. You can:
+
+- paste the lines into the [helper](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/#devices), which fills in the `type`, a name and an icon for all known products, or
+- look up the product id in the list of known products below.
+
+<details>
+  <summary>Known products</summary>
+
+| Product id | `type` | Name | Model | Manufacturer | Suggested `icon` |
+|---|---|---|---|---|---|
+| `0x13` | `RGB` | SmartLIGHT Color Mesh 9 | SMLm_C9 | AwoX |  |
+| `0x14` | `WHITE_TEMP` | SmartLIGHT White Mesh 13W | SMLm_W13 | AwoX |  |
+| `0x15` | `RGB` | SmartLIGHT Color Mesh 13W | SMLm_C13 | AwoX |  |
+| `0x16` | `WHITE_TEMP` | SmartLIGHT White Mesh 15W | SMLm_W15 | AwoX |  |
+| `0x17` | `RGB` | SmartLIGHT Color Mesh 15W | SMLm_C15 | AwoX |  |
+| `0x21` | `WHITE_TEMP` | SmartLIGHT White Mesh 9W | SSMLm_w9 | AwoX |  |
+| `0x22` | `RGB` | SmartLIGHT Color Mesh 9W | SSMLm_c9 | AwoX |  |
+| `0x23` | `RGB` | EGLOBulb A60 9W | ESMLm_c9 | EGLO |  |
+| `0x24` | `RGB` | Keria SmartLIGHT Color Mesh 9W | KSMLm_c9 | KERIA |  |
+| `0x25` | `RGB` | EGLOPanel 30X30 | EPanel_300 | EGLO |  |
+| `0x26` | `RGB` | EGLOPanel 60X60 | EPanel_600 | EGLO |  |
+| `0x27` | `RGB` | EGLO Ceiling DOWNLIGHT | EMod_Ceil | EGLO |  |
+| `0x29` | `RGB` | EGLOBulb G95 13W | ESMLm_c13g | EGLO |  |
+| `0x2A` | `RGB` | Keria SmartLIGHT Color Mesh 13W Globe | KSMLm_c13g | KERIA |  |
+| `0x2B` | `RGB` | SmartLIGHT Color Mesh 13W Globe | SMLm_c13g | AwoX |  |
+| `0x30` | `RGB` | EGLOPanel 30X120 | EPanel_120 | EGLO |  |
+| `0x32` | `RGB` | Spot 120 | EGLOSpot 120/w | EGLO | `mdis:wall-sconce-flat` |
+| `0x33` | `RGB` | Spot 170 | EGLOSpot 170/w | EGLO | `mdi:wall-sconce-flat` |
+| `0x34` | `RGB` | Spot 225 | EGLOSpot 225/w | EGLO | `mdi:wall-sconce-flat` |
+| `0x35` | `RGB` | Giron-C 17W | EGLO 32589 | EGLO | `mdi:wall-sconce-flat` |
+| `0x36` | `RGB` | EGLO Ceiling GIRON 30 | ECeil_g38 | EGLO |  |
+| `0x37` | `RGB` | SmartLIGHT Color Mesh 5W GU10 | SMLm_c5_GU10 | AwoX |  |
+| `0x38` | `RGB` | SmartLIGHT Color Mesh 5W E14 | SMLm_c5_E14 | AwoX |  |
+| `0x3A` | `RGB` | Keria SmartLIGHT Color Mesh 5W GU10 | KSMLm_c5_GU10 | KERIA |  |
+| `0x3B` | `RGB` | Keria SmartLIGHT Color Mesh 5W E14 | KSMLm_c5_E14 | KERIA |  |
+| `0x3C` | `RGB` | SmartLIGHT Color Mesh 5W GU10 | ESMLm_c5_GU10 | EGLO |  |
+| `0x3D` | `RGB` | SmartLIGHT Color Mesh 5W E14 | ESMLm_c5_E14 | EGLO |  |
+| `0x3F` | `RGB` | EGLO Surface round | EFueva_225r | EGLO |  |
+| `0x40` | `RGB` | EGLO Surface square | EFueva_225s | EGLO |  |
+| `0x41` | `RGB` | EGLO Surface round | EFueva_300r | EGLO |  |
+| `0x42` | `RGB` | EGLO Surface square | EFueva_300s | EGLO |  |
+| `0x43` | `RGB` | SmartLIGHT Color Mesh 9W | SMLm_c9s | AwoX |  |
+| `0x44` | `RGB` | SmartLIGHT Color Mesh 13W | SMLm_c13gs | AwoX |  |
+| `0x45` | `RGB` | EGLOBulb A60 9W | ESMLm_c9s | EGLO |  |
+| `0x46` | `RGB` | EGLOBulb G95 13W | ESMLm_c13gs | EGLO |  |
+| `0x47` | `RGB` | Keria SmartLIGHT Color Mesh 9W | KSMLm_c9s | KERIA |  |
+| `0x48` | `RGB` | Keria SmartLIGHT Color Mesh 13W Glob | KSMLm_c13gs | KERIA |  |
+| `0x49` | `DIM` | EGLOBulb A60 Warm | ESMLm_w9w | EGLO |  |
+| `0x4A` | `DIM` | EGLOBulb A60 Neutral | ESMLm_w9n | EGLO |  |
+| `0x4B` | `RGB` | EGLO Ceiling | ECeiling_30 | EGLO |  |
+| `0x4C` | `RGB` | EGLO Pendant | EPendant_30 | EGLO |  |
+| `0x4D` | `RGB` | EGLO Pendant | EPendant_20 | EGLO |  |
+| `0x4E` | `RGB` | EGLO Stripled 3m | EStrip_3m | EGLO |  |
+| `0x4F` | `RGB` | EGLO Stripled 5m | EStrip_5m | EGLO |  |
+| `0x50` | `DIM` | Outdoor | EOutdoor_w14w | EGLO |  |
+| `0x51` | `RGB` | EGLOSpot | ETriSpot_85 | EGLO |  |
+| `0x53` | `RGB` | SmartLIGHT Color Mesh 9W | SMLm_c9i | AwoX |  |
+| `0x54` | `RGB` | EGLOBulb A60 9W | ESMLm_c9i | EGLO |  |
+| `0x55` | `RGB` | Keria SmartLIGHT Color Mesh 9W | KSMLm_c9i | KERIA |  |
+| `0x56` | `RGB` | EGLOPanel 62X62 | EPanel_620 | EGLO |  |
+| `0x57` | `RGB` | EGLOPanel 45X45 | EPanel_450 | EGLO |  |
+| `0x59` | `RGB` | SmartLIGHT Color Mesh 13W Globe | SMLm_c13gi | AwoX |  |
+| `0x5A` | `RGB` | EGLOBulb G95 13W | ESMLm_c13gi | EGLO |  |
+| `0x5B` | `RGB` | Keria SmartLIGHT Color Mesh 13W Globe | KSMLm_c13gi | KERIA |  |
+| `0x5C` | `RGB` | SmartLIGHT Color Mesh 9W | SSMLm_c9i | AwoX |  |
+| `0x62` | `PLUG` | EGLO PLUG | ESMP-Bm10-FR | EGLO | `mdi:power-socket-fr` |
+| `0x63` | `PLUG` | EGLO PLUG | ESMP-Bm10-GE | EGLO | `mdi:power-socket-de` |
+| `0x64` | `WHITE_TEMP` | SmartLIGHT White Mesh 9W | SMLm_w9 | AwoX |  |
+| `0x65` | `WHITE_TEMP` | SmartLIGHT White Mesh 9W | ESMLm_w9 | EGLO |  |
+| `0x67` | `PLUG` | EGLO PLUG PLUS | SMPWBm10FR | EGLO | `mdi:power-socket-fr` |
+| `0x68` | `PLUG` | EGLO PLUG PLUS | SMPWBm10GE | EGLO | `mdi:power-socket-de` |
+| `0x69` | `RGB` | Ceiling GIRON 60 | ECeil_g60 | EGLO |  |
+| `0x6A` | `WHITE_TEMP` | SmartLIGHT Bulb A60 Warm | SMLm_w9w | AwoX |  |
+| `0x6F` | `WHITE_TEMP` | EGLOBulb Filament G80 | ESMLFm-w6-G80 | EGLO |  |
+| `0x71` | `WHITE_TEMP` | EGLOBulb Filament ST64 | ESMLFm-w6-ST64 | EGLO |  |
+| `0x75` | `WHITE_TEMP` | EGLOBulb Filament G95 | ESMLFm-w6-G95 | EGLO |  |
+| `0x77` | `RGB` | EGLO Spot | ESpot_c5 | EGLO |  |
+| `0x78` | `RGB` | EGLO Fraioli | EFraioli_c17 | EGLO |  |
+| `0x79` | `RGB` | EGLO Frattina | EFrattina_c18 | EGLO |  |
+| `0x7A` | `RGB` | EGLO Frattina | EFrattina_c27 | EGLO |  |
+| `0x7B` | `RGB` | EGLOPanel 30 Round | EPanel_r300 | EGLO |  |
+| `0x7C` | `RGB` | EGLOPanel 45 Round | EPanel_r450 | EGLO |  |
+| `0x7D` | `RGB` | EGLOPanel 60 Round | EPanel_r600 | EGLO |  |
+| `0x7E` | `RGB` | EGLOPanel 10X120 | EPanel_120_10 | EGLO |  |
+| `0x80` | `WHITE_TEMP` | EPanel white round | EPanel_w_round | EGLO |  |
+| `0x81` | `WHITE_TEMP` | EPanel white square | EPanel_w_square | EGLO |  |
+| `0x82` | `WHITE_TEMP` | EPanel white rectangle | EPanel_w_rect | EGLO |  |
+| `0x83` | `WHITE_TEMP` | ECeiling white round | ECeiling-w | EGLO |  |
+| `0x84` | `PLUG` | EGLO PLUG PLUS | SMPWBm10FRa | EGLO | `mdi:power-socket-fr` |
+| `0x85` | `PLUG` | EGLO PLUG PLUS | SMPWBm10GEa | EGLO | `mdi:power-socket-de` |
+| `0x87` | `WHITE_TEMP` | EGLO Tunable White | EDoubleWhite | EGLO |  |
+| `0x88` | `RGB` | EGLO Ceiling GIRON 80 | ECeil_g80 | EGLO |  |
+| `0x89` | `WHITE_TEMP` | Outdoor Marchesa-C | EMarchesa_C | EGLO |  |
+| `0x8A` | `WHITE_TEMP` | Outdoor Francari-C | EFrancari_C | EGLO |  |
+| `0x8B` | `PLUG` | EGLO PLUG | ESMP-Bm10-AUS | EGLO | `mdi:power-socket-au` |
+| `0x8C` | `PLUG` | EGLO PLUG | ESMP-Bm10-UK | EGLO | `mdi:power-socket-uk` |
+| `0x8D` | `PLUG` | EGLO PLUG | ESMP-Bm10-CH | EGLO | `mdi:power-socket-ch` |
+| `0x8F` | `PLUG` | EGLO PLUG PLUS | SMPWBm10UK | EGLO | `mdi:power-socket-uk` |
+| `0x90` | `PLUG` | EGLO PLUG PLUS | SMPWBm10CH | EGLO | `mdi:power-socket-ch` |
+| `0x92` | `RGB` | EPanel square | EPanel_36W_square | EGLO |  |
+| `0x94` | `DIM` | EGLOBulb Filament ST64 | ESMLFm-w6w-ST64 | EGLO |  |
+| `0x95` | `DIM` | EGLOBulb Filament G95 | ESMLFm-w6w-G95 | EGLO |  |
+| `0x96` | `RGB` | EGLO RGB+TW | EGLO-RGB-TW | EGLO |  |
+| `0x97` | `PLUG` | EGLO PLUG PLUS | SMPWBm10AUS | EGLO | `mdi:power-socket-au` |
+| `0x99` | `RGB` | EGLO RGB+TW | EGLO-RGB-TW | EGLO |  |
+| `0x9A` | `WHITE_TEMP` | EGLO Tunable White | JBT_Gen_CCT_1 | EGLO |  |
+| `0x9B` | `DIM` | EGLO Tunable White | JBT_Gen_Dim_1 | EGLO |  |
+| `0x9C` | `PLUG` | EGLO PLUG PLUS | SMPWBm10FRb | EGLO | `mdi:power-socket-fr` |
+| `0x9D` | `PLUG` | EGLO PLUG PLUS | SMPWBm10GEb | EGLO | `mdi:power-socket-de` |
+| `0x9E` | `PLUG` | EGLO PLUG PLUS | SMPWBm10AUSb | EGLO | `mdi:power-socket-au` |
+| `0x9F` | `PLUG` | EGLO PLUG PLUS | SMPWBm10UKb | EGLO | `mdi:power-socket-uk` |
+| `0xA0` | `PLUG` | EGLO PLUG PLUS | SMPWBm10CHb | EGLO | `mdi:power-socket-ch` |
+| `0xA1` | `RGB` | EGLOLed Relax | ELedRelax | EGLO |  |
+| `0xA2` | `RGB` | EGLOLed Stripe | ELedStripe | EGLO |  |
+| `0xA3` | `RGB` | EGLOLed Plus | ELedPlus | EGLO |  |
+| `0xA4` | `WHITE_TEMP` | EGLOLed Plus TW | ELedPlus-TW | EGLO |  |
+| `0xA5` | `DIM` | EGLOLed Plus Dimmable | ELedPlus-Dimm | EGLO |  |
+| `0xA6` | `WHITE_TEMP` | EGLOBulb | ESMLFm-w6-TW | EGLO |  |
+| `0xA7` | `DIM` | EGLOBulb | ESMLFm-w6-Dimm | EGLO |  |
+| `0xA8` | `RGB` | ECeiling square | ECeiling-24W-square | EGLO |  |
+| `0xA9` | `RGB` | EGLO RGB+TW | EGLO-RGB-TW-IPSU | EGLO |  |
+| `0xAA` | `WHITE_TEMP` | EGLO Tunable White | EGLO-TW-IPSU | EGLO |  |
+| `0xAC` | `RGB` | EGLO frameless | EPanel-Frameless | EGLO |  |
+| `0xAD` | `WHITE_TEMP` | EGLO Tunable White | EDoubleWhite-ipsu | EGLO |  |
+
+When you add a product here, also add it to `PRODUCTS` in [awoxh-mesh-credentials-tool/index.html](awoxh-mesh-credentials-tool/index.html).
+Is your product missing? Please open an issue with the product id, the model and the type that works.
 </details>
 
 ### Groups/zones
 
-The groups (called zone in AwoxHomeControl) are automaticly discovered as lights with the group id as name (example: `Group 3`).
-
-When using HomeAssistant the groups will show up as a device under the MQTT integration. And you can (re)name the group/device there.
+The groups (called zone in AwoxHomeControl) are configured like devices, under [`groups`](#groups-list-optional). Groups that are found in the mesh but not configured are also written to the log, with the group id as name (example: `Group 3`).
 
 When 1 light in a group is `on` the group will be shown as `on`. If 1 light in the group is `online` the group will be shown `online`.
 
@@ -755,11 +172,91 @@ To connect to you device you need the `mesh_name` and `mesh_password` easiest wa
 See [`mesh_name`](#mesh_name-string)
 
 
-#### `address_prefix` _(string - OPTIONAL)_
+#### `devices` _(list - OPTIONAL)_
 
-The device will scan for available BLE devices and will use this prefix to filter discovered devices by MAC address.
+The mesh devices to make available in Home Assistant. Each entry becomes a device in Home Assistant with one entity: a light, or a switch for `PLUG`.
 
-###### _Default value: `A4:C1`_
+###### _Example:_
+```yaml
+  devices:
+    - mesh_id: 12345
+      name: Kitchen spot
+      type: RGB
+    - mesh_id: 23456
+      name: Coffee machine
+      type: PLUG
+      area_id: kitchen # an area from esphome -> areas
+      power:
+        name: Power
+      voltage:
+        name: Voltage
+```
+
+- `mesh_id` _(number)_ - The id of the device in the mesh, shown in the log.
+- `name` _(string)_ - The name of the device in Home Assistant.
+- `type` _(RGB, DIM, WHITE_TEMP, PLUG)_ - What kind of device it is, see the [known products](#devices):
+  - `RGB` - light with color, white temperature and brightness
+  - `WHITE_TEMP` - light with white temperature and brightness
+  - `DIM` - light with brightness only
+  - `PLUG` - plug or other on/off device, shown as a switch
+- `area_id` _(OPTIONAL)_ - The id of an area defined under [`esphome: areas:`](https://esphome.io/components/esphome/#areas).
+- `power`, `voltage` _(sensor - OPTIONAL, `PLUG` only)_ - Power (W) and voltage (V) measured by plugs with power monitoring, like the EGLO PLUG PLUS. When at least one is set, the hub asks the plug for a new reading every 5 seconds. All [sensor](https://esphome.io/components/sensor/#base-sensor-configuration) options can be used, for example `filters` to send fewer updates. The sensors are added to the same device as the switch.
+- All options of an [ESPHome light](https://esphome.io/components/light/#base-light-configuration) or [switch](https://esphome.io/components/switch/#base-switch-configuration) can be used, for example `icon`, `on_turn_on` or `disabled_by_default`. Not available:
+  - `effects` - the mesh effects `Candle` and `Color loop` are always added for RGB lights.
+  - `restore_mode`, `restore_state` and `initial_state` - the state is always taken from the mesh.
+  - `gamma_correct` - brightness is sent to the mesh without gamma correction.
+
+The hub creates an ESPHome [sub-device](https://esphome.io/components/esphome/#sub-devices) with id `awox_mesh_<mesh_id>` for each entry, so do not use these ids yourself.
+
+
+#### `groups` _(list - OPTIONAL)_
+
+The mesh groups to make available in Home Assistant. Same options as [`devices`](#devices-list-optional), with `group_id` (0 to 255) instead of `mesh_id`. Group 0 contains all lights of the mesh. The default `icon` of a group is `mdi:lightbulb-group`.
+
+###### _Example:_
+```yaml
+  groups:
+    - group_id: 3
+      name: Living room
+      type: RGB
+```
+
+When 1 light in a group is `on` the group will be shown as `on`.
+
+
+#### `last_unconfigured_device` _(text sensor - OPTIONAL)_
+
+Shows one device or group that is not in your YAML, as a line you can paste under `devices:` or `groups:`. The next one is shown every 5 seconds until all have been shown, and again each time Home Assistant connects to the hub. Open the history of the sensor in Home Assistant to see all of them. All options of an [ESPHome text sensor](https://esphome.io/components/text_sensor/#base-text-sensor-configuration) can be used.
+
+###### _Example:_
+```yaml
+  last_unconfigured_device:
+    name: Last unconfigured device
+```
+
+
+#### `active_connections`, `online_devices`, `unconfigured_devices` _(sensor - OPTIONAL)_
+
+Diagnostic sensors of the hub: the number of BLE connections to the mesh, the number of mesh devices reachable through these connections, and the number of mesh devices and groups that are found but not in your YAML. All options of an [ESPHome sensor](https://esphome.io/components/sensor/#base-sensor-configuration) can be used.
+
+###### _Example:_
+```yaml
+  active_connections:
+    name: Active connections
+  online_devices:
+    name: Online devices
+  unconfigured_devices:
+    name: Unconfigured mesh devices
+```
+
+
+The options below control how the hub connects to the mesh. The defaults work for most setups. Change them when the hub does not reach all devices, or when you use more than one hub.
+
+#### `max_connections` _(number, min: 1, max: 3 - OPTIONAL)_
+
+In some situations the device that the hub connects to isn't able to reach the next device in the mesh. Then it can help that the hub connects to a different/additional device to be able to reach all device.
+
+###### _Default value: 2_
 
 
 #### `min_rssi` _(number - OPTIONAL)_
@@ -767,6 +264,13 @@ The device will scan for available BLE devices and will use this prefix to filte
 The device will scan for available BLE devices and will use this value to filter discovered devices by the RSSI value.
 
 ###### _Default value: -90_
+
+
+#### `address_prefix` _(string - OPTIONAL)_
+
+The device will scan for available BLE devices and will use this prefix to filter discovered devices by MAC address.
+
+###### _Default value: `A4:C1`_
 
 
 #### `allowed_mac_addresses` _(list of MAC addresses - OPTIONAL)_
@@ -795,19 +299,22 @@ For example when you want to setup multiple ESP modules to only control a part o
 ```
 
 
-#### `max_connections` _(number, min: 1, max: 3 - OPTIONAL)_
+### Migrating from `device_info`
 
-In some situations the device that the hub connects to isn't able to reach the next device in the mesh. Then it can help that the hub connects to a different/additional device to be able to reach all device.
+The `device_info` option is no longer used. It only described products, so the hub could suggest the `type` and `icon` of new devices. Everything a device needs is now set on its own entry under [`devices`](#devices-list-optional), and the [helper](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/#devices) or the [known products](#devices) list gives you the type of a product.
 
-###### _Default value: 2_
+A YAML that still has `device_info` is not accepted any more: the config check stops with an error that links here. This way you notice it when you update, instead of getting devices with a wrong type.
 
+| Old `device_info` field | Where it goes now |
+|---|---|
+| `device_type` | `type` on each `devices` entry of that product, and on `groups` entries of those devices |
+| `icon` | `icon` on each `devices` entry (optional) |
+| `name`, `model`, `manufacturer` | Not used any more. Give each device its own `name` |
+| `product_id` | Not needed in the YAML. It is shown in the log, to look up the type |
 
-#### `device_info`
-
-List of device type descriptions.
-
-###### _Example:_
+###### _Before:_
 ```yaml
+awox_mesh:
   device_info:
     - product_id: 0x32
       device_type: RGB
@@ -815,51 +322,235 @@ List of device type descriptions.
       name: Spot 120
       model: EGLOSpot 120/w
       icon: mdi:wall-sconce-flat
+  devices:
+    - mesh_id: 12345
+      name: Kitchen spot
+      type: RGB
 ```
 
-For each `product_id` the available features and name + icon can be configured. Unknown devices will be recognized as a dimmable device (`DIM`).
+###### _After:_
+```yaml
+awox_mesh:
+  devices:
+    - mesh_id: 12345
+      name: Kitchen spot
+      type: RGB
+      icon: mdi:wall-sconce-flat
+```
 
-##### `product_id` _(hex value)_
+Steps:
 
-Each product type has a unique `product_id` ([see above](#devices) how to find the `product_id` of your devices).
-
-##### `device_type` _(RGB, DIM, WHITE_TEMP, PLUG)_
-
-- `RGB` - RGB device
-- `DIM` - dimmable device
-- `WHITE_TEMP` - Dimmable and adjustable white color device
-- `PLUG` - Plug (or on/off) device
-
-##### `manufacturer` _(string)_
-
-The name of the product manufacturer.
-
-######  _Example value `EGLO`_
-
-
-##### `name`
-
-The product name.
-
-###### _Example value `Spot 120`_
+1. Check that every entry under `devices` and `groups` has the right `type` (the `device_type` of its product).
+2. Copy the `icon` of the product to the `devices` entries, if you want it.
+3. Remove the whole `device_info:` block and flash the hub.
+4. Devices that are not in your YAML yet are written to the log with an empty `type:`. Paste these lines into the [helper](https://fsaris.github.io/EspHome-AwoX-BLE-mesh-hub/awoxh-mesh-credentials-tool/#devices). You can also paste your old `device_info` block there, so the helper knows the products that are not in the known products list.
+5. Did you have a product in `device_info` that is not in the [known products](#devices) list? Please open an issue, so it can be added for everyone.
 
 
-##### `model`
+### Migrating from the MQTT version
 
-The product model name.
+The older version of this hub sent its own MQTT discovery messages, and Home Assistant created a device for each mesh device and group. The new version needs the devices in the YAML (see [Devices](#devices)). Home Assistant still knows all your old devices, with the names and areas you gave them, so it can write most of the new config for you. Afterwards the old MQTT messages are removed from the broker, so the old devices disappear from Home Assistant.
 
-###### _Example value `EGLOSpot 120/w`_
+Do the steps in this order: step 1 needs the old devices, and step 3 removes them.
 
-##### `icon` _(string representing a mdi icon - OPTIONAL)_
+#### 1. Let Home Assistant write the new config
 
-The product icon used for example in HomeAssistent as device icon.
+Do this **before** you remove anything. In Home Assistant, go to **Developer tools** > **Template**, and paste the template below in the editor. The result on the right is the new config: the `devices` and `groups` with your own names, the `type` (from the features of the old light or switch), the `icon`, the `area_id`, and `power`/`voltage` for plugs that had these sensors. It also lists the areas you need under `esphome:`.
 
-###### _Example value: `mdi:wall-sconce-flat`_
+<details>
+  <summary>Template</summary>
+
+```jinja
+{#- Builds the awox_mesh devices/groups config from the old MQTT devices in Home Assistant -#}
+{%- set ns = namespace(devices=[], groups=[], areas={}) %}
+{%- for dev in integration_entities('mqtt') | map('device_id') | reject('none') | unique %}
+  {%- set id = namespace(mesh=none, group=none) %}
+  {%- for ident in device_attr(dev, 'identifiers') %}
+    {%- set value = ident[1] | string %}
+    {%- if value is match('esp-awox-mesh-group-[0-9]+$') %}{% set id.group = value.split('-')[-1] | int %}
+    {%- elif value is match('esp-awox-mesh-[0-9]+$') %}{% set id.mesh = value.split('-')[-1] | int %}{% endif %}
+  {%- endfor %}
+  {%- if id.mesh is not none or id.group is not none %}
+    {%- set entities = device_entities(dev) %}
+    {%- set main = (entities | select('match', '(light|switch)\\.') | list + [none]) | first %}
+    {%- set modes = (state_attr(main, 'supported_color_modes') or []) if main else [] %}
+    {%- if main and main.startswith('switch.') %}{% set type = 'PLUG' %}
+    {%- elif 'rgb' in modes %}{% set type = 'RGB' %}
+    {%- elif 'color_temp' in modes %}{% set type = 'WHITE_TEMP' %}
+    {%- elif modes %}{% set type = 'DIM' %}
+    {%- else %}{% set type = '' %}{% endif %}
+    {%- set area = area_id(dev) %}
+    {%- if area %}
+      {%- set esphome_area = area_name(area) | slugify %}
+      {%- set esphome_area = ('area_' ~ esphome_area) if esphome_area[:1] is match('[0-9]') else esphome_area %}
+      {%- set ns.areas = dict(ns.areas, **{esphome_area: area_name(area)}) %}
+    {%- endif %}
+    {%- set sensors = entities | select('match', 'sensor\\.') | map('state_attr', 'device_class') | list %}
+    {%- set entry = dict(
+      id=id.mesh if id.mesh is not none else id.group,
+      name=device_attr(dev, 'name_by_user') or device_attr(dev, 'name'),
+      type=type,
+      icon=state_attr(main, 'icon') if main else none,
+      area=esphome_area if area else none,
+      power='power' in sensors,
+      voltage='voltage' in sensors,
+      model=device_attr(dev, 'model')) %}
+    {%- if id.mesh is not none %}{% set ns.devices = ns.devices + [entry] %}
+    {%- else %}{% set ns.groups = ns.groups + [entry] %}{% endif %}
+  {%- endif %}
+{%- endfor %}
+{%- macro entries(list, key) %}
+{%- for e in list | sort(attribute='id') %}
+    - {{ key }}: {{ e.id }}
+      name: {{ e.name | tojson }}
+      type: {{ e.type }}{{ '  # unknown, choose RGB, WHITE_TEMP, DIM or PLUG' if not e.type else '' }}
+{%- if e.icon and not (key == 'group_id' and e.icon == 'mdi:lightbulb-group') %}
+      icon: {{ e.icon }}
+{%- endif %}
+{%- if e.area %}
+      area_id: {{ e.area }}
+{%- endif %}
+{%- if e.power %}
+      power: {}
+{%- endif %}
+{%- if e.voltage %}
+      voltage: {}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+{%- if ns.areas %}
+esphome:
+  areas:
+{%- for area_id, area_name in ns.areas | dictsort %}
+    - id: {{ area_id }}
+      name: {{ area_name | tojson }}
+{%- endfor %}
+
+{% endif -%}
+awox_mesh:
+  devices:{{ entries(ns.devices, 'mesh_id') }}
+  groups:{{ entries(ns.groups, 'group_id') }}
+```
+</details>
+
+Check the result:
+
+- Entries with an empty `type:` had no light or switch in Home Assistant. Fill in the type yourself, see [Devices](#devices).
+- Mesh devices that never showed up in Home Assistant are not in the list. The hub writes these to the log after flashing, see [Devices](#devices).
+
+#### 2. Update the YAML and flash the hub
+
+1. Copy the `areas` into your `esphome:` section and the `devices` and `groups` into your `awox_mesh:` section.
+2. Make sure `esphome:` has a `friendly_name`. It is needed because the entities of the mesh devices have no name of their own.
+3. Remove `device_info` (see [Migrating from `device_info`](#migrating-from-device_info)).
+4. Choose `api:` (recommended) or `mqtt:`, see [MQTT instead of the native API](#mqtt-instead-of-the-native-api).
+5. Flash the hub. When you use the native API, wait with adding the hub to the ESPHome integration until step 3 is done.
+
+#### 3. Remove the old MQTT messages
+
+The old messages are kept by the MQTT broker (retained messages), so the old devices stay in Home Assistant until these messages are removed. The script below finds them for all old AwoX devices in Home Assistant and removes them by sending an empty message to each topic. Home Assistant then removes the old devices.
+
+Only run it **after** the hub runs the new version, otherwise the old version sends the messages again.
+
+1. In Home Assistant, go to **Settings** > **Automations & scenes** > **Scripts** > **Create script** > **Create new script**. Open the menu (three dots), choose **Edit in YAML**, paste the script below and save.
+2. Run the script with **Only show the topics** turned on and your **Hub name** (the `name` under `esphome:`). A notification lists the topics that will be removed. Check that the hub name in the topics is right.
+3. Run it again with **Only show the topics** turned off. The old devices disappear from the MQTT integration.
+4. Delete the script.
+
+<details>
+  <summary>Script</summary>
+
+```yaml
+alias: Remove old AwoX MQTT messages
+description: >-
+  Removes the messages that the old (MQTT) version of the AwoX BLE mesh hub left on the MQTT broker,
+  so Home Assistant removes the old MQTT devices.
+fields:
+  hub_name:
+    name: Hub name
+    description: The `name` under `esphome:` in the YAML of the hub.
+    required: true
+    selector:
+      text: {}
+  topic_prefix:
+    name: Topic prefix
+    description: Only needed when you set `topic_prefix` under `mqtt:`. Empty means the hub name.
+    selector:
+      text: {}
+  discovery_prefix:
+    name: Discovery prefix
+    description: Only needed when you changed the MQTT discovery prefix. Empty means homeassistant.
+    selector:
+      text: {}
+  dry_run:
+    name: Only show the topics
+    description: Shows the topics in a notification, without removing anything.
+    default: true
+    selector:
+      boolean: {}
+sequence:
+  - variables:
+      topics: >-
+        {%- set disc = discovery_prefix | default('homeassistant', true) %}
+        {%- set prefix = topic_prefix | default(hub_name, true) %}
+        {%- set ns = namespace(topics=[]) %}
+        {%- for dev in integration_entities('mqtt') | map('device_id') | reject('none') | unique %}
+          {%- set id = namespace(mesh=none, group=none, mac=none) %}
+          {%- for ident in device_attr(dev, 'identifiers') %}
+            {%- set value = ident[1] | string %}
+            {%- if value is match('esp-awox-mesh-group-[0-9]+$') %}{% set id.group = value.split('-')[-1] | int %}
+            {%- elif value is match('esp-awox-mesh-[0-9]+$') %}{% set id.mesh = value.split('-')[-1] | int %}
+            {%- elif value is match('([0-9A-F]{2}:){5}[0-9A-F]{2}$') %}{% set id.mac = value | replace(':', '') %}{% endif %}
+          {%- endfor %}
+          {%- if id.mesh is not none and id.mac %}
+            {%- set ns.topics = ns.topics + [
+              disc ~ '/light/awox-' ~ id.mac ~ '/config',
+              disc ~ '/switch/awox-' ~ id.mac ~ '/config',
+              disc ~ '/sensor/awox-' ~ id.mac ~ '-power/config',
+              disc ~ '/sensor/awox-' ~ id.mac ~ '-voltage/config',
+              prefix ~ '/' ~ id.mesh ~ '/state',
+              prefix ~ '/' ~ id.mesh ~ '/availability'] %}
+          {%- elif id.group is not none %}
+            {%- set ns.topics = ns.topics + [
+              disc ~ '/light/group-' ~ id.group ~ '/config',
+              prefix ~ '/' ~ (id.group + 32768) ~ '/state',
+              prefix ~ '/' ~ (id.group + 32768) ~ '/availability'] %}
+          {%- endif %}
+        {%- endfor %}
+        {%- for i in range(3) %}
+          {%- for kind in ['devices', 'mesh-ids', 'mesh-id', 'mac'] %}
+            {%- set ns.topics = ns.topics + [disc ~ '/sensor/' ~ hub_name ~ '/connection-' ~ i ~ '-' ~ kind ~ '/config'] %}
+          {%- endfor %}
+          {%- set ns.topics = ns.topics + [disc ~ '/binary_sensor/' ~ hub_name ~ '/connection-' ~ i ~ '-connected/config'] %}
+        {%- endfor %}
+        {{ ns.topics + [prefix ~ '/connected', prefix ~ '/connection_status'] }}
+  - if:
+      - condition: template
+        value_template: "{{ dry_run | default(true) }}"
+    then:
+      - action: persistent_notification.create
+        data:
+          title: "Old AwoX MQTT topics ({{ topics | count }})"
+          message: '- {{ topics | join("\n- ") }}'
+    else:
+      - repeat:
+          for_each: "{{ topics }}"
+          sequence:
+            - action: mqtt.publish
+              data:
+                topic: "{{ repeat.item }}"
+                payload: ""
+                retain: true
+mode: single
+```
+</details>
+
+When you then add the hub to Home Assistant, the new entities normally get the same entity ids as the old ones (the name of the device), so automations and dashboards keep working. If an entity got `_2` at the end of its id, the old entity still existed. Remove the old device from the MQTT integration, and rename the entity id in Home Assistant.
 
 
 ### General YAML / Setup remarks
 
-- Disable Home Assistant API (`api:`) to prevent frequent MQTT disconnections
+- Enable the Home Assistant API (`api:`), or use MQTT instead (see [below](#mqtt-instead-of-the-native-api))
 - Use the `esp-idf` as framework type
 
 #### Hidden SSID WLAN
@@ -868,7 +559,7 @@ In case of using a WLAN with hidden SSID, mind to use the multiple network optio
 
 #### Ethernet instead of Wi-Fi (ESP32-S3, Seeed XIAO W5500 Ethernet Adapter)
 
-The component does not use Wi-Fi itself, only MQTT, so the hub can run on a wired connection. A ready-to-use example for the
+The component does not use Wi-Fi itself, only the ESPHome API, so the hub can run on a wired connection. A ready-to-use example for the
 [Seeed Studio XIAO W5500 Ethernet Adapter](https://wiki.seeedstudio.com/xiao_w5500_ethernet_adapter/) (XIAO ESP32-S3 Plus + WIZnet W5500, powered by PoE or USB-C)
 is in [awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml](awox-ble-mesh-hub-xiao-esp32s3-w5500.yaml).
 
@@ -892,18 +583,36 @@ Remarks:
 
 - Seeed documents the ESPHome setup only for boards produced after November 1st 2025 (hardware revision V1.2, which fixed the `INT` pin wiring). Check the pins against the schematic if the Ethernet link does not come up with an older board.
 - The first flash has to be done over USB-C. Afterwards `esphome upload --device <ip-address>` works over Ethernet. The `.local` mDNS name is not resolved across VLANs/subnets, use the IP address.
-- The W5500 sends untagged frames. If you use VLANs, plug the board into an access port of the VLAN where your MQTT broker is reachable.
+- The W5500 sends untagged frames. If you use VLANs, plug the board into an access port of the VLAN where Home Assistant is reachable.
 - Without PoE the board needs 5 V on USB-C; a plain Ethernet cable only carries data.
 - Without a cable the log shows `Connecting failed; reconnecting` every 15 seconds. This is normal and does not mean the pins are wrong.
 - Other boards with a W5500 use the same [`ethernet:`](https://esphome.io/components/ethernet/) component, with their own board, variant and pins.
 
+#### MQTT instead of the native API
+
+The lights and switches are normal ESPHome entities, so they also work with the [`mqtt:`](https://esphome.io/components/mqtt/) component. Replace `api:` with `mqtt:` in your YAML:
+
+```yaml
+mqtt:
+  broker: 192.168.1.10
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+```
+
+Differences from the native API:
+
+- ESPHome MQTT discovery does not support sub-devices. In Home Assistant all lights and switches are entities of the hub device, not separate devices.
+- When there is no `api:` in the YAML, each light or switch gets the `name` of its device or group as its own name, so the entities can be told apart in Home Assistant. Use a different `name` for each device and group: the name is also used in the MQTT topics.
+- When both `api:` and `mqtt:` are used, the native API setup is kept: the entities have no name of their own, so over MQTT they all show the name of the hub.
+- Use either `api:` or `mqtt:`, not both. The Bluetooth connections to the mesh already use a large part of the ESP32 memory, and running both on the same hub can leave too little free memory and make it unstable.
+- An `ota:` with `encryption:` but no `key:` takes the key from `api:`. Without `api:`, add the key to `ota:` itself.
+
 ### Requirements
 - ESP32 module (Wi-Fi or Ethernet; the ESP32-S3 with a W5500 is described [above](#ethernet-instead-of-wi-fi-esp32-s3-seeed-xiao-w5500-ethernet-adapter))
-- ESPHome 2026.5.0 or newer
-- MQTT broker
+- ESPHome 2026.10.1 or newer
 
 ### Recomendations
-- HomeAssistant 2023.8.0 or newer
+- HomeAssistant with the ESPHome integration (sub-device support, 2025.7.0 or newer)
 - ESPHome add-on for HomeAssistant
 
 

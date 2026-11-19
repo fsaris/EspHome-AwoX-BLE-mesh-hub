@@ -11,24 +11,23 @@
 #include "esphome/core/automation.h"
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
+#ifdef USE_SENSOR
+#include "esphome/components/sensor/sensor.h"
+#endif
+#ifdef USE_TEXT_SENSOR
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 
-#include "awox_mesh_mqtt.h"
 #include "mesh_destination.h"
+#include "mesh_entity.h"
 #include "mesh_connection.h"
 #include "device.h"
-#include "device_info.h"
 #include "group.h"
 
 namespace esphome {
 namespace awox_mesh {
 
 using namespace esp32_ble_client;
-
-struct PublishOnlineStatus {
-  Device *device;
-  bool online;
-  uint32_t time;
-};
 
 struct FoundDevice {
   int rssi{0};
@@ -41,8 +40,6 @@ struct FoundDevice {
 class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component {
   uint32_t start;
   uint32_t device_info_request_interval_ms = 5000;
-  uint32_t delayed_availability_publish_debounce_time_ms = 3000;
-
 
   bool ready_to_connect = false;
 
@@ -59,12 +56,6 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   std::string mesh_password = "";
 
   std::string address_prefix = "A4:C1";
-
-  AwoxMeshMqtt *publish_connection;
-
-  DeviceInfoResolver *device_info_resolver = new DeviceInfoResolver();
-
-  std::deque<PublishOnlineStatus> delayed_availability_publish{};
 
   bool start_up_delay_done();
 
@@ -86,9 +77,21 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   bool mac_addresses_allowed(const uint64_t address);
 
-  void send_group_discovery(Group *group);
-
   void sync_and_publish_group_state(Group *group);
+
+  void bind_entity(MeshDestination *destination);
+
+  void log_unconfigured_device(Device *device);
+
+  void log_unconfigured_group(Group *group);
+
+  int count_unconfigured();
+
+  bool can_publish_unconfigured();
+
+  void publish_unconfigured(const char *entry);
+
+  void publish_next_unconfigured();
 
  public:
   void set_mesh_name(const std::string &mesh_name) {
@@ -99,23 +102,30 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
     ESP_LOGI("awox.mesh", "password: %s", mesh_password.c_str());
     this->mesh_password = mesh_password;
   }
-  void register_device(int device_type, int product_id, const char *name, const char *model, const char *manufacturer,
-                       const char *icon) {
-    this->device_info_resolver->register_device(device_type, product_id, name, model, manufacturer, icon);
-  }
 
   void add_allowed_mesh_id(const int mesh_id) { this->allowed_mesh_ids_.push_back(mesh_id); }
 
   void add_allowed_mac_address(const uint64_t mac_address) { this->allowed_mac_addresses_.push_back(mac_address); }
 
+  void register_entity(MeshEntity *entity) { this->entities_.push_back(entity); }
+
+#ifdef USE_TEXT_SENSOR
+  void set_last_unconfigured_sensor(text_sensor::TextSensor *sensor) { this->last_unconfigured_sensor_ = sensor; }
+#endif
+
+#ifdef USE_SENSOR
+  void set_active_connections_sensor(sensor::Sensor *sensor) { this->active_connections_sensor_ = sensor; }
+  void set_online_devices_sensor(sensor::Sensor *sensor) { this->online_devices_sensor_ = sensor; }
+  void set_unconfigured_devices_sensor(sensor::Sensor *sensor) { this->unconfigured_devices_sensor_ = sensor; }
+#endif
+
   float get_setup_priority() const override;
 
   void setup() override;
 
-  AwoxMesh() {
-    this->start = esphome::millis();
-    this->publish_connection = new AwoxMeshMqtt(this);
-  }
+  void dump_config() override;
+
+  AwoxMesh() { this->start = esphome::millis(); }
 
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 
@@ -138,9 +148,9 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
 
   Group *get_group(int dest, Device *device);
 
-  void publish_availability(Device *device, bool delayed);
+  void on_availability_changed(Device *device);
 
-  void send_discovery(Device *device);
+  void on_device_identified(Device *device);
 
   void publish_state(MeshDestination *mesh_destination);
   void publish_power_measurement(Device *device);
@@ -161,8 +171,21 @@ class AwoxMesh : public esp32_ble_tracker::ESPBTDeviceListener, public Component
   std::vector<FoundDevice *> found_devices_{};
   std::vector<Device *> mesh_devices_{};
   std::vector<Group *> mesh_groups_{};
+  std::vector<MeshEntity *> entities_{};
   std::vector<int> allowed_mesh_ids_{};
   std::vector<uint64_t> allowed_mac_addresses_{};
+
+#ifdef USE_TEXT_SENSOR
+  text_sensor::TextSensor *last_unconfigured_sensor_{nullptr};
+  // Position in the list of unconfigured devices and groups, see publish_next_unconfigured()
+  int unconfigured_round_index_{0};
+#endif
+
+#ifdef USE_SENSOR
+  sensor::Sensor *active_connections_sensor_{nullptr};
+  sensor::Sensor *online_devices_sensor_{nullptr};
+  sensor::Sensor *unconfigured_devices_sensor_{nullptr};
+#endif
 
   void request_device_info(Device *device);
   void request_status_update(int dest);

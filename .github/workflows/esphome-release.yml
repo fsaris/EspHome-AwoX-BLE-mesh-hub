@@ -1,0 +1,143 @@
+name: New ESPHome release
+
+# Builds the test configs once for every new ESPHome release and beta.
+# A failing build opens an issue, a later successful build of that version closes it.
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build again even when the version was tested before
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.lookup.outputs.versions }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Find the newest release and beta
+        id: lookup
+        shell: bash
+        run: |
+          pip install --quiet packaging
+          versions=$(python - <<'EOF'
+          import json
+          import urllib.request
+
+          from packaging.version import Version
+
+          with urllib.request.urlopen("https://pypi.org/pypi/esphome/json") as response:
+              data = json.load(response)
+
+          stable = data["info"]["version"]
+          releases = [
+              Version(v)
+              for v, files in data["releases"].items()
+              if files and not all(f.get("yanked") for f in files)
+          ]
+          beta = max(v for v in releases if v.is_prerelease)
+          versions = [stable]
+          if beta > Version(stable):
+              versions.append(str(beta))
+          print(json.dumps(versions))
+          EOF
+          )
+          echo "Versions: $versions"
+          echo "versions=$versions" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: versions
+    name: ESPHome ${{ matrix.esphome }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        esphome: ${{ fromJSON(needs.versions.outputs.versions) }}
+    env:
+      ISSUE_TITLE: Build fails with ESPHome ${{ matrix.esphome }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # An empty cache entry marks a version that already built successfully
+      - name: Check if this version was tested before
+        id: tested
+        uses: actions/cache/restore@v4
+        with:
+          path: .tested
+          key: esphome-tested-${{ matrix.esphome }}
+          lookup-only: true
+
+      - name: Skip
+        if: steps.tested.outputs.cache-hit == 'true' && !inputs.force
+        run: echo "ESPHome ${{ matrix.esphome }} was tested before, nothing to do"
+
+      - uses: actions/checkout@v4
+        if: steps.tested.outputs.cache-hit != 'true' || inputs.force
+
+      - uses: actions/setup-python@v5
+        if: steps.tested.outputs.cache-hit != 'true' || inputs.force
+        with:
+          python-version: "3.13"
+
+      - name: Install ESPHome
+        if: steps.tested.outputs.cache-hit != 'true' || inputs.force
+        run: |
+          pip install "esphome==${{ matrix.esphome }}"
+          esphome version
+
+      - name: Build test-api
+        if: steps.tested.outputs.cache-hit != 'true' || inputs.force
+        run: esphome compile tests/test-api.yaml
+
+      - name: Build test-mqtt
+        if: (steps.tested.outputs.cache-hit != 'true' || inputs.force) && !cancelled()
+        run: esphome compile tests/test-mqtt.yaml
+
+      - name: Mark version as tested
+        if: steps.tested.outputs.cache-hit != 'true'
+        run: mkdir -p .tested
+
+      - name: Save tested marker
+        if: steps.tested.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .tested
+          key: esphome-tested-${{ matrix.esphome }}
+
+      - name: Open an issue
+        if: failure()
+        run: |
+          existing=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number,title \
+            --jq "map(select(.title == env.ISSUE_TITLE)) | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            echo "Issue #$existing is already open"
+            exit 0
+          fi
+          gh issue create --title "$ISSUE_TITLE" --body "$(cat <<EOF
+          The build tests in \`tests/\` fail with ESPHome ${{ matrix.esphome }}.
+
+          Build log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          This issue is closed automatically once the build works with this version.
+          EOF
+          )"
+
+      - name: Close the issue
+        if: success() && (steps.tested.outputs.cache-hit != 'true' || inputs.force)
+        run: |
+          for number in $(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number,title \
+            --jq "map(select(.title == env.ISSUE_TITLE)) | .[].number"); do
+            gh issue close "$number" --comment "The build works with ESPHome ${{ matrix.esphome }} now: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          done

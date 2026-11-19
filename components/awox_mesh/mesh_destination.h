@@ -1,12 +1,14 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
-#include "device_info.h"
+#include "esphome/core/hal.h"
 
 namespace esphome {
 namespace awox_mesh {
 
 class Group;
+class MeshEntity;
 
 struct MeshDestinationState {
   unsigned char state[7];
@@ -26,8 +28,21 @@ class MeshDestination {
   unsigned char B = 0;
 
   bool online = false;
-  bool send_discovery = false;
-  DeviceInfo *device_info = nullptr;
+  // Product info received (devices) or device type known (groups)
+  bool identified = false;
+  // ESPHome entity configured for this device or group, nullptr when not in the YAML
+  MeshEntity *entity = nullptr;
+
+  // Set when a command is sent to the mesh (from an API client, the web server or an automation).
+  // A group keeps the commanded state until its members report the same, so members that have
+  // not reported yet do not flip it back.
+  bool command_pending = false;
+  uint32_t command_time = 0;
+
+  void command_sent() {
+    this->command_pending = true;
+    this->command_time = millis();
+  }
 
   virtual int dest();
   virtual const char *type() const;

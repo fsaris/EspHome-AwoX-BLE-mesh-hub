@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <html>
+<head>
+<meta charset="utf-8">
+<title>AwoX mesh hub helper</title>
+</head>
 <style>
   .row {
     display: flex;
@@ -18,6 +22,20 @@
   .note {
     font-style: italic;
     font-size: small;
+  }
+
+  textarea {
+    width: 100%;
+    max-width: 800px;
+    box-sizing: border-box;
+    font-family: monospace;
+  }
+
+  #devices-output {
+    max-width: 800px;
+    overflow-x: auto;
+    background: #f4f4f4;
+    padding: 8px;
   }
 </style>
 <script>
@@ -99,13 +117,230 @@
 
   }
 
+  // Known products by product id. Keep in sync with "Known products" in the README.
+  const PRODUCTS = {
+    0x13: { type: "RGB", name: "SmartLIGHT Color Mesh 9", model: "SMLm_C9", manufacturer: "AwoX" },
+    0x14: { type: "WHITE_TEMP", name: "SmartLIGHT White Mesh 13W", model: "SMLm_W13", manufacturer: "AwoX" },
+    0x15: { type: "RGB", name: "SmartLIGHT Color Mesh 13W", model: "SMLm_C13", manufacturer: "AwoX" },
+    0x16: { type: "WHITE_TEMP", name: "SmartLIGHT White Mesh 15W", model: "SMLm_W15", manufacturer: "AwoX" },
+    0x17: { type: "RGB", name: "SmartLIGHT Color Mesh 15W", model: "SMLm_C15", manufacturer: "AwoX" },
+    0x21: { type: "WHITE_TEMP", name: "SmartLIGHT White Mesh 9W", model: "SSMLm_w9", manufacturer: "AwoX" },
+    0x22: { type: "RGB", name: "SmartLIGHT Color Mesh 9W", model: "SSMLm_c9", manufacturer: "AwoX" },
+    0x23: { type: "RGB", name: "EGLOBulb A60 9W", model: "ESMLm_c9", manufacturer: "EGLO" },
+    0x24: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 9W", model: "KSMLm_c9", manufacturer: "KERIA" },
+    0x25: { type: "RGB", name: "EGLOPanel 30X30", model: "EPanel_300", manufacturer: "EGLO" },
+    0x26: { type: "RGB", name: "EGLOPanel 60X60", model: "EPanel_600", manufacturer: "EGLO" },
+    0x27: { type: "RGB", name: "EGLO Ceiling DOWNLIGHT", model: "EMod_Ceil", manufacturer: "EGLO" },
+    0x29: { type: "RGB", name: "EGLOBulb G95 13W", model: "ESMLm_c13g", manufacturer: "EGLO" },
+    0x2A: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 13W Globe", model: "KSMLm_c13g", manufacturer: "KERIA" },
+    0x2B: { type: "RGB", name: "SmartLIGHT Color Mesh 13W Globe", model: "SMLm_c13g", manufacturer: "AwoX" },
+    0x30: { type: "RGB", name: "EGLOPanel 30X120", model: "EPanel_120", manufacturer: "EGLO" },
+    0x32: { type: "RGB", name: "Spot 120", model: "EGLOSpot 120/w", manufacturer: "EGLO", icon: "mdis:wall-sconce-flat" },
+    0x33: { type: "RGB", name: "Spot 170", model: "EGLOSpot 170/w", manufacturer: "EGLO", icon: "mdi:wall-sconce-flat" },
+    0x34: { type: "RGB", name: "Spot 225", model: "EGLOSpot 225/w", manufacturer: "EGLO", icon: "mdi:wall-sconce-flat" },
+    0x35: { type: "RGB", name: "Giron-C 17W", model: "EGLO 32589", manufacturer: "EGLO", icon: "mdi:wall-sconce-flat" },
+    0x36: { type: "RGB", name: "EGLO Ceiling GIRON 30", model: "ECeil_g38", manufacturer: "EGLO" },
+    0x37: { type: "RGB", name: "SmartLIGHT Color Mesh 5W GU10", model: "SMLm_c5_GU10", manufacturer: "AwoX" },
+    0x38: { type: "RGB", name: "SmartLIGHT Color Mesh 5W E14", model: "SMLm_c5_E14", manufacturer: "AwoX" },
+    0x3A: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 5W GU10", model: "KSMLm_c5_GU10", manufacturer: "KERIA" },
+    0x3B: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 5W E14", model: "KSMLm_c5_E14", manufacturer: "KERIA" },
+    0x3C: { type: "RGB", name: "SmartLIGHT Color Mesh 5W GU10", model: "ESMLm_c5_GU10", manufacturer: "EGLO" },
+    0x3D: { type: "RGB", name: "SmartLIGHT Color Mesh 5W E14", model: "ESMLm_c5_E14", manufacturer: "EGLO" },
+    0x3F: { type: "RGB", name: "EGLO Surface round", model: "EFueva_225r", manufacturer: "EGLO" },
+    0x40: { type: "RGB", name: "EGLO Surface square", model: "EFueva_225s", manufacturer: "EGLO" },
+    0x41: { type: "RGB", name: "EGLO Surface round", model: "EFueva_300r", manufacturer: "EGLO" },
+    0x42: { type: "RGB", name: "EGLO Surface square", model: "EFueva_300s", manufacturer: "EGLO" },
+    0x43: { type: "RGB", name: "SmartLIGHT Color Mesh 9W", model: "SMLm_c9s", manufacturer: "AwoX" },
+    0x44: { type: "RGB", name: "SmartLIGHT Color Mesh 13W", model: "SMLm_c13gs", manufacturer: "AwoX" },
+    0x45: { type: "RGB", name: "EGLOBulb A60 9W", model: "ESMLm_c9s", manufacturer: "EGLO" },
+    0x46: { type: "RGB", name: "EGLOBulb G95 13W", model: "ESMLm_c13gs", manufacturer: "EGLO" },
+    0x47: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 9W", model: "KSMLm_c9s", manufacturer: "KERIA" },
+    0x48: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 13W Glob", model: "KSMLm_c13gs", manufacturer: "KERIA" },
+    0x49: { type: "DIM", name: "EGLOBulb A60 Warm", model: "ESMLm_w9w", manufacturer: "EGLO" },
+    0x4A: { type: "DIM", name: "EGLOBulb A60 Neutral", model: "ESMLm_w9n", manufacturer: "EGLO" },
+    0x4B: { type: "RGB", name: "EGLO Ceiling", model: "ECeiling_30", manufacturer: "EGLO" },
+    0x4C: { type: "RGB", name: "EGLO Pendant", model: "EPendant_30", manufacturer: "EGLO" },
+    0x4D: { type: "RGB", name: "EGLO Pendant", model: "EPendant_20", manufacturer: "EGLO" },
+    0x4E: { type: "RGB", name: "EGLO Stripled 3m", model: "EStrip_3m", manufacturer: "EGLO" },
+    0x4F: { type: "RGB", name: "EGLO Stripled 5m", model: "EStrip_5m", manufacturer: "EGLO" },
+    0x50: { type: "DIM", name: "Outdoor", model: "EOutdoor_w14w", manufacturer: "EGLO" },
+    0x51: { type: "RGB", name: "EGLOSpot", model: "ETriSpot_85", manufacturer: "EGLO" },
+    0x53: { type: "RGB", name: "SmartLIGHT Color Mesh 9W", model: "SMLm_c9i", manufacturer: "AwoX" },
+    0x54: { type: "RGB", name: "EGLOBulb A60 9W", model: "ESMLm_c9i", manufacturer: "EGLO" },
+    0x55: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 9W", model: "KSMLm_c9i", manufacturer: "KERIA" },
+    0x56: { type: "RGB", name: "EGLOPanel 62X62", model: "EPanel_620", manufacturer: "EGLO" },
+    0x57: { type: "RGB", name: "EGLOPanel 45X45", model: "EPanel_450", manufacturer: "EGLO" },
+    0x59: { type: "RGB", name: "SmartLIGHT Color Mesh 13W Globe", model: "SMLm_c13gi", manufacturer: "AwoX" },
+    0x5A: { type: "RGB", name: "EGLOBulb G95 13W", model: "ESMLm_c13gi", manufacturer: "EGLO" },
+    0x5B: { type: "RGB", name: "Keria SmartLIGHT Color Mesh 13W Globe", model: "KSMLm_c13gi", manufacturer: "KERIA" },
+    0x5C: { type: "RGB", name: "SmartLIGHT Color Mesh 9W", model: "SSMLm_c9i", manufacturer: "AwoX" },
+    0x62: { type: "PLUG", name: "EGLO PLUG", model: "ESMP-Bm10-FR", manufacturer: "EGLO", icon: "mdi:power-socket-fr" },
+    0x63: { type: "PLUG", name: "EGLO PLUG", model: "ESMP-Bm10-GE", manufacturer: "EGLO", icon: "mdi:power-socket-de" },
+    0x64: { type: "WHITE_TEMP", name: "SmartLIGHT White Mesh 9W", model: "SMLm_w9", manufacturer: "AwoX" },
+    0x65: { type: "WHITE_TEMP", name: "SmartLIGHT White Mesh 9W", model: "ESMLm_w9", manufacturer: "EGLO" },
+    0x67: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10FR", manufacturer: "EGLO", icon: "mdi:power-socket-fr" },
+    0x68: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10GE", manufacturer: "EGLO", icon: "mdi:power-socket-de" },
+    0x69: { type: "RGB", name: "Ceiling GIRON 60", model: "ECeil_g60", manufacturer: "EGLO" },
+    0x6A: { type: "WHITE_TEMP", name: "SmartLIGHT Bulb A60 Warm", model: "SMLm_w9w", manufacturer: "AwoX" },
+    0x6F: { type: "WHITE_TEMP", name: "EGLOBulb Filament G80", model: "ESMLFm-w6-G80", manufacturer: "EGLO" },
+    0x71: { type: "WHITE_TEMP", name: "EGLOBulb Filament ST64", model: "ESMLFm-w6-ST64", manufacturer: "EGLO" },
+    0x75: { type: "WHITE_TEMP", name: "EGLOBulb Filament G95", model: "ESMLFm-w6-G95", manufacturer: "EGLO" },
+    0x77: { type: "RGB", name: "EGLO Spot", model: "ESpot_c5", manufacturer: "EGLO" },
+    0x78: { type: "RGB", name: "EGLO Fraioli", model: "EFraioli_c17", manufacturer: "EGLO" },
+    0x79: { type: "RGB", name: "EGLO Frattina", model: "EFrattina_c18", manufacturer: "EGLO" },
+    0x7A: { type: "RGB", name: "EGLO Frattina", model: "EFrattina_c27", manufacturer: "EGLO" },
+    0x7B: { type: "RGB", name: "EGLOPanel 30 Round", model: "EPanel_r300", manufacturer: "EGLO" },
+    0x7C: { type: "RGB", name: "EGLOPanel 45 Round", model: "EPanel_r450", manufacturer: "EGLO" },
+    0x7D: { type: "RGB", name: "EGLOPanel 60 Round", model: "EPanel_r600", manufacturer: "EGLO" },
+    0x7E: { type: "RGB", name: "EGLOPanel 10X120", model: "EPanel_120_10", manufacturer: "EGLO" },
+    0x80: { type: "WHITE_TEMP", name: "EPanel white round", model: "EPanel_w_round", manufacturer: "EGLO" },
+    0x81: { type: "WHITE_TEMP", name: "EPanel white square", model: "EPanel_w_square", manufacturer: "EGLO" },
+    0x82: { type: "WHITE_TEMP", name: "EPanel white rectangle", model: "EPanel_w_rect", manufacturer: "EGLO" },
+    0x83: { type: "WHITE_TEMP", name: "ECeiling white round", model: "ECeiling-w", manufacturer: "EGLO" },
+    0x84: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10FRa", manufacturer: "EGLO", icon: "mdi:power-socket-fr" },
+    0x85: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10GEa", manufacturer: "EGLO", icon: "mdi:power-socket-de" },
+    0x87: { type: "WHITE_TEMP", name: "EGLO Tunable White", model: "EDoubleWhite", manufacturer: "EGLO" },
+    0x88: { type: "RGB", name: "EGLO Ceiling GIRON 80", model: "ECeil_g80", manufacturer: "EGLO" },
+    0x89: { type: "WHITE_TEMP", name: "Outdoor Marchesa-C", model: "EMarchesa_C", manufacturer: "EGLO" },
+    0x8A: { type: "WHITE_TEMP", name: "Outdoor Francari-C", model: "EFrancari_C", manufacturer: "EGLO" },
+    0x8B: { type: "PLUG", name: "EGLO PLUG", model: "ESMP-Bm10-AUS", manufacturer: "EGLO", icon: "mdi:power-socket-au" },
+    0x8C: { type: "PLUG", name: "EGLO PLUG", model: "ESMP-Bm10-UK", manufacturer: "EGLO", icon: "mdi:power-socket-uk" },
+    0x8D: { type: "PLUG", name: "EGLO PLUG", model: "ESMP-Bm10-CH", manufacturer: "EGLO", icon: "mdi:power-socket-ch" },
+    0x8F: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10UK", manufacturer: "EGLO", icon: "mdi:power-socket-uk" },
+    0x90: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10CH", manufacturer: "EGLO", icon: "mdi:power-socket-ch" },
+    0x92: { type: "RGB", name: "EPanel square", model: "EPanel_36W_square", manufacturer: "EGLO" },
+    0x94: { type: "DIM", name: "EGLOBulb Filament ST64", model: "ESMLFm-w6w-ST64", manufacturer: "EGLO" },
+    0x95: { type: "DIM", name: "EGLOBulb Filament G95", model: "ESMLFm-w6w-G95", manufacturer: "EGLO" },
+    0x96: { type: "RGB", name: "EGLO RGB+TW", model: "EGLO-RGB-TW", manufacturer: "EGLO" },
+    0x97: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10AUS", manufacturer: "EGLO", icon: "mdi:power-socket-au" },
+    0x99: { type: "RGB", name: "EGLO RGB+TW", model: "EGLO-RGB-TW", manufacturer: "EGLO" },
+    0x9A: { type: "WHITE_TEMP", name: "EGLO Tunable White", model: "JBT_Gen_CCT_1", manufacturer: "EGLO" },
+    0x9B: { type: "DIM", name: "EGLO Tunable White", model: "JBT_Gen_Dim_1", manufacturer: "EGLO" },
+    0x9C: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10FRb", manufacturer: "EGLO", icon: "mdi:power-socket-fr" },
+    0x9D: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10GEb", manufacturer: "EGLO", icon: "mdi:power-socket-de" },
+    0x9E: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10AUSb", manufacturer: "EGLO", icon: "mdi:power-socket-au" },
+    0x9F: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10UKb", manufacturer: "EGLO", icon: "mdi:power-socket-uk" },
+    0xA0: { type: "PLUG", name: "EGLO PLUG PLUS", model: "SMPWBm10CHb", manufacturer: "EGLO", icon: "mdi:power-socket-ch" },
+    0xA1: { type: "RGB", name: "EGLOLed Relax", model: "ELedRelax", manufacturer: "EGLO" },
+    0xA2: { type: "RGB", name: "EGLOLed Stripe", model: "ELedStripe", manufacturer: "EGLO" },
+    0xA3: { type: "RGB", name: "EGLOLed Plus", model: "ELedPlus", manufacturer: "EGLO" },
+    0xA4: { type: "WHITE_TEMP", name: "EGLOLed Plus TW", model: "ELedPlus-TW", manufacturer: "EGLO" },
+    0xA5: { type: "DIM", name: "EGLOLed Plus Dimmable", model: "ELedPlus-Dimm", manufacturer: "EGLO" },
+    0xA6: { type: "WHITE_TEMP", name: "EGLOBulb", model: "ESMLFm-w6-TW", manufacturer: "EGLO" },
+    0xA7: { type: "DIM", name: "EGLOBulb", model: "ESMLFm-w6-Dimm", manufacturer: "EGLO" },
+    0xA8: { type: "RGB", name: "ECeiling square", model: "ECeiling-24W-square", manufacturer: "EGLO" },
+    0xA9: { type: "RGB", name: "EGLO RGB+TW", model: "EGLO-RGB-TW-IPSU", manufacturer: "EGLO" },
+    0xAA: { type: "WHITE_TEMP", name: "EGLO Tunable White", model: "EGLO-TW-IPSU", manufacturer: "EGLO" },
+    0xAC: { type: "RGB", name: "EGLO frameless", model: "EPanel-Frameless", manufacturer: "EGLO" },
+    0xAD: { type: "WHITE_TEMP", name: "EGLO Tunable White", model: "EDoubleWhite-ipsu", manufacturer: "EGLO" }
+  };
+  const TYPES = ['RGB', 'WHITE_TEMP', 'DIM', 'PLUG'];
+
+  // Reads an old `awox_mesh -> device_info` block, so products only the user knew about are filled in too
+  function parseDeviceInfo(text) {
+    const products = {};
+    text.split(/(?=product_id\s*:)/).forEach((chunk) => {
+      const field = (key) => {
+        const match = chunk.match(new RegExp('^[\\s-]*' + key + '\\s*:\\s*(.*?)\\s*$', 'm'));
+        return match ? match[1].replace(/^["']|["']$/g, '') : '';
+      };
+      const id = parseInt(field('product_id'), 16);
+      const type = field('device_type').toUpperCase();
+      if (!id || !TYPES.includes(type)) {
+        return;
+      }
+      products[id] = {
+        type: type,
+        name: field('name'),
+        model: field('model'),
+        manufacturer: field('manufacturer'),
+        icon: field('icon'),
+      };
+    });
+    return products;
+  }
+
+  function hex(id) {
+    return '0x' + id.toString(16).toUpperCase().padStart(2, '0');
+  }
+
+  function quote(text) {
+    return '"' + text.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  }
+
+  function describe(id, product) {
+    return product ? `product ${hex(id)} ${product.manufacturer} ${product.model}`.trim()
+      : `unknown product ${hex(id)}: choose ${TYPES.join(', ')}`;
+  }
+
+  function completeEntries() {
+    const products = { ...PRODUCTS, ...parseDeviceInfo(document.getElementById('device-info-input').value) };
+    const devices = new Map();
+    const groups = new Map();
+    const lookups = [];
+
+    document.getElementById('devices-input').value.split('\n').forEach((line) => {
+      const productMatch = line.match(/product\s+(0x[0-9a-f]{1,2})\b/i);
+      const productId = productMatch ? parseInt(productMatch[1], 16) : 0;
+      const product = products[productId];
+      const nameMatch = line.match(/name:\s*"((?:[^"\\]|\\.)*)"/);
+      const typeMatch = line.match(/type:\s*([A-Za-z_]+)/);
+      const macMatch = line.match(/mac\s+([0-9A-F]{2}(?::[0-9A-F]{2}){5})/i);
+      const deviceMatch = line.match(/mesh_id:\s*(\d+)/);
+      const groupMatch = line.match(/group_id:\s*(\d+)/);
+      const bareMatch = line.match(/^\s*(0x[0-9a-f]{1,2})\s*$/i);
+
+      if (deviceMatch || groupMatch) {
+        const id = parseInt((deviceMatch || groupMatch)[1], 10);
+        const defaultName = deviceMatch ? `Device ${id}` : `Group ${id}`;
+        let name = nameMatch ? nameMatch[1].replace(/\\(.)/g, '$1') : defaultName;
+        if (deviceMatch && product && name === defaultName) {
+          name = `${product.name} ${id}`;
+        }
+        const type = product ? product.type : (typeMatch ? typeMatch[1].toUpperCase() : '');
+        let entry = `{${deviceMatch ? 'mesh_id' : 'group_id'}: ${id}, name: ${quote(name)}, type: ${type}`;
+        if (deviceMatch && product && product.icon) {
+          entry += `, icon: ${quote(product.icon)}`;
+        }
+        entry += '}';
+        let comment = productId ? describe(productId, product) : (type ? '' : `unknown type: choose ${TYPES.join(', ')}`);
+        if (macMatch) {
+          comment += (comment ? ', ' : '') + 'mac ' + macMatch[1];
+        }
+        (deviceMatch ? devices : groups).set(id, `    - ${entry}` + (comment ? `  # ${comment}` : ''));
+      } else if (bareMatch) {
+        const id = parseInt(bareMatch[1], 16);
+        const known = products[id];
+        lookups.push(known ? `# ${hex(id)}: type: ${known.type}  (${known.name}, ${known.model}, ${known.manufacturer})`
+          + (known.icon ? `  icon: ${known.icon}` : '') : `# ${describe(id, known)}`);
+      }
+    });
+
+    let output = '';
+    if (devices.size) {
+      output += '  devices:\n' + [...devices.values()].join('\n') + '\n';
+    }
+    if (groups.size) {
+      output += '  groups:\n' + [...groups.values()].join('\n') + '\n';
+    }
+    if (lookups.length) {
+      output += (output ? '\n' : '') + lookups.join('\n') + '\n';
+    }
+    document.getElementById('devices-output').textContent =
+      output || 'No devices, groups or product ids found in the pasted text.';
+  }
+
 </script>
 
 <body>
 
   <h1>
-    Get your Mesh credentials from the AwoX cloud
+    AwoX mesh hub helper
   </h1>
+
+  <h2>
+    Get your Mesh credentials from the AwoX cloud
+  </h2>
   <p class="note">
     The credentials are directly posted to the AwoX servers and only known in this browser.
   </p>
@@ -152,6 +387,43 @@
     </pre>
   <p class="note">When multiple services are shown look for 'service: "mesh"'.</p>
   <p class="note">When login fails try your username in full lower-case.</p>
+
+  <h2 id="devices">
+    Complete device entries
+  </h2>
+  <p>
+    The hub writes each mesh device and group that is not in your YAML to the log, and to the
+    <code>last_unconfigured_device</code> sensor, with an empty <code>type:</code>. Paste these lines below
+    (from the log or the sensor history, one or many) to fill in the <code>type</code>, a name and an icon from the
+    product id. You can also paste a product id alone, like <code>0x32</code>, to look it up.
+  </p>
+  <p class="note">This part does not use the AwoX cloud, everything stays in this browser.</p>
+
+  <p><strong>Lines from the log or the sensor</strong></p>
+  <textarea id="devices-input" rows="10" placeholder='- {mesh_id: 12345, name: "Device 12345", type: }  # product 0x32, mac A4:C1:38:8A:BA:11'></textarea>
+
+  <details>
+    <summary>Optional: your old <code>device_info</code> block</summary>
+    <p class="note">
+      Paste the <code>device_info:</code> list from your old YAML, so products that are not in the built-in list are
+      filled in too. Your entries are used before the built-in ones.
+    </p>
+    <textarea id="device-info-input" rows="8" placeholder="device_info:
+  - product_id: 0x32
+    device_type: RGB
+    name: Spot 120
+    model: EGLOSpot 120/w
+    manufacturer: EGLO"></textarea>
+  </details>
+
+  <p><button onclick="completeEntries()">Complete entries</button></p>
+
+  <p>Paste the result under <code>awox_mesh:</code> in your YAML, and change the names to your own:</p>
+  <pre id="devices-output"></pre>
+  <p class="note">
+    A product that is not known keeps an empty <code>type:</code>. Choose RGB, WHITE_TEMP, DIM or PLUG, and please open an
+    issue so the product can be added.
+  </p>
 
 </body>
 

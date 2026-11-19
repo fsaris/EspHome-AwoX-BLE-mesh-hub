@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.config }} (ESPHome ${{ matrix.esphome }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [test-api, test-mqtt]
+        # Oldest version the component supports (cv.require_esphome_version) and the newest release
+        esphome: ["2026.10.1", latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ESPHome
+        run: |
+          if [ "${{ matrix.esphome }}" = "latest" ]; then
+            pip install esphome
+          else
+            pip install "esphome==${{ matrix.esphome }}"
+          fi
+          esphome version
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: platformio-${{ matrix.esphome }}-${{ hashFiles('tests/common.yaml') }}
+          restore-keys: platformio-${{ matrix.esphome }}-
+
+      - name: Validate config
+        run: esphome config tests/${{ matrix.config }}.yaml
+
+      - name: Compile
+        run: esphome compile tests/${{ matrix.config }}.yaml

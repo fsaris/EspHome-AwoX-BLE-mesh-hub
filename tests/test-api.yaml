@@ -1,0 +1,9 @@
+# Build test: devices as sub-devices over the native API
+esphome:
+  name: awox-test-api
+  friendly_name: AwoX test API
+
+packages:
+  common: !include common.yaml
+
+api:
